@@ -731,6 +731,566 @@ function parseCSVLine(line) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// TEST DASHBOARD — Reconciliation Tests
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Helper: normalize contractor name for fuzzy matching
+function normalizeName(name) {
+  if (!name) return "";
+  return name
+    .toUpperCase()
+    .replace(/[.,\-&|/\\()'"!]+/g, " ")
+    .replace(/\b(INC|LLC|LP|CO|CORP|CORPORATION|COMPANY|CONTRACTING|CONSTRUCTION|THE)\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// GET /api/projects/:id/tests/pa-002 — JV vs Sub "This Period" reconciliation
+app.get("/api/projects/:id/tests/pa-002", async (req, res) => {
+  try {
+    const db = await getDb();
+    const projId = req.params.id;
+
+    // 1. Get all JV line items with contractor names and this-period values
+    const lineItems = query(db, "SELECT * FROM line_items WHERE project_id=?", [projId]);
+    // 2. Get all subcontractor applications
+    const subApps = query(db, "SELECT * FROM subcontractor_applications WHERE project_id=?", [projId]);
+
+    // 3. Build a map of normalized sub names -> aggregated this-period total
+    // USE g703_work_this_period (continuation sheet grand total) — NOT the G702 cover value
+    const subMap = {}; // normalized name -> { totalThisPeriod, apps: [...], originalName }
+    for (const sa of subApps) {
+      const norm = normalizeName(sa.subcontractor_name);
+      if (!subMap[norm]) subMap[norm] = { totalThisPeriod: 0, apps: [], originalName: sa.subcontractor_name };
+      // Prefer G703 continuation sheet grand total; fall back to G702 cover if null
+      const thisPeriod = parseFloat(sa.g703_work_this_period) || parseFloat(sa.completed_work_this_period) || 0;
+      subMap[norm].totalThisPeriod += thisPeriod;
+      subMap[norm].apps.push(sa);
+    }
+
+    // 4. Group JV line items by contractor name, sum this-period
+    const jvMap = {}; // normalized name -> { totalThisPeriod, items: [...], originalName }
+    for (const li of lineItems) {
+      if (!li.contractor_name) continue;
+      const norm = normalizeName(li.contractor_name);
+      if (!jvMap[norm]) jvMap[norm] = { totalThisPeriod: 0, items: [], originalName: li.contractor_name };
+      jvMap[norm].totalThisPeriod += parseFloat(li.work_completed_this) || 0;
+      jvMap[norm].items.push(li);
+    }
+
+    // 5. LLM-based fuzzy matching
+    const jvNames = Object.keys(jvMap).map(k => ({ norm: k, orig: jvMap[k].originalName }));
+    const subNames = Object.keys(subMap).map(k => ({ norm: k, orig: subMap[k].originalName }));
+
+    let llmMatches = {}; // jvNorm -> subNorm
+    try {
+      llmMatches = await llmFuzzyMatch(jvNames, subNames);
+    } catch (e) {
+      console.error("LLM matching failed, falling back to string matching:", e.message);
+    }
+
+    // 5b. Consolidate JV entries that map to the same sub (LLM tells us they're the same company)
+    // Group by target subNorm: { subNorm: [jvNorm1, jvNorm2, ...] }
+    const subToJvGroups = {};
+    for (const [jvNorm, subNorm] of Object.entries(llmMatches)) {
+      if (!subToJvGroups[subNorm]) subToJvGroups[subNorm] = [];
+      subToJvGroups[subNorm].push(jvNorm);
+    }
+
+    // Merge JV entries that share the same sub target
+    const mergedJvMap = {}; // new key -> { totalThisPeriod, items: [...], originalNames: [...], matchedSubNorm, matchMethod }
+    const alreadyMerged = new Set();
+
+    for (const [subNorm, jvNorms] of Object.entries(subToJvGroups)) {
+      if (jvNorms.length > 1) {
+        // Multiple JV entries → merge them
+        const mergedKey = jvNorms.join("+");
+        let totalThisPeriod = 0;
+        let allItems = [];
+        let names = [];
+        for (const jvN of jvNorms) {
+          if (jvMap[jvN]) {
+            totalThisPeriod += jvMap[jvN].totalThisPeriod;
+            allItems.push(...jvMap[jvN].items);
+            names.push(jvMap[jvN].originalName);
+            alreadyMerged.add(jvN);
+          }
+        }
+        mergedJvMap[mergedKey] = {
+          totalThisPeriod,
+          items: allItems,
+          originalName: names.join(" + "),
+          originalNames: names,
+          matchedSubNorm: subNorm,
+          matchMethod: "LLM",
+        };
+      } else {
+        // Single JV entry with LLM match
+        const jvN = jvNorms[0];
+        alreadyMerged.add(jvN);
+        mergedJvMap[jvN] = {
+          ...jvMap[jvN],
+          matchedSubNorm: subNorm,
+          matchMethod: "LLM",
+        };
+      }
+    }
+
+    // Add remaining JV entries that weren't matched by LLM
+    // Merge entries that string-match to the same sub (whether or not it's already claimed)
+    for (const jvNorm of Object.keys(jvMap)) {
+      if (alreadyMerged.has(jvNorm)) continue;
+
+      // Try string matching
+      let stringMatchSub = null;
+      let bestScore = 0;
+      for (const subNorm of Object.keys(subMap)) {
+        if (jvNorm === subNorm) { stringMatchSub = subNorm; bestScore = 100; break; }
+        if (jvNorm.includes(subNorm) || subNorm.includes(jvNorm)) {
+          const score = Math.min(jvNorm.length, subNorm.length) / Math.max(jvNorm.length, subNorm.length) * 90;
+          if (score > bestScore) { bestScore = score; stringMatchSub = subNorm; }
+        }
+        const jvFirst = jvNorm.split(" ")[0];
+        const subFirst = subNorm.split(" ")[0];
+        if (jvFirst.length > 3 && jvFirst === subFirst && bestScore < 70) {
+          bestScore = 70; stringMatchSub = subNorm;
+        }
+      }
+      if (bestScore < 50) stringMatchSub = null;
+
+      // If another merged entry already owns this sub, merge into it
+      if (stringMatchSub) {
+        const ownerKey = Object.keys(mergedJvMap).find(k => mergedJvMap[k].matchedSubNorm === stringMatchSub);
+        if (ownerKey && mergedJvMap[ownerKey]) {
+          mergedJvMap[ownerKey].totalThisPeriod += jvMap[jvNorm].totalThisPeriod;
+          mergedJvMap[ownerKey].items.push(...jvMap[jvNorm].items);
+          mergedJvMap[ownerKey].originalName += " + " + jvMap[jvNorm].originalName;
+          continue; // merged
+        }
+      }
+
+      mergedJvMap[jvNorm] = { ...jvMap[jvNorm], matchedSubNorm: stringMatchSub, matchMethod: stringMatchSub ? "String" : null };
+    }
+
+    // 6. Match and compare — only test JV items where this-period > 0
+    const TOLERANCE = 10; // ±$10
+    const results = [];
+
+    for (const [jvKey, jvData] of Object.entries(mergedJvMap)) {
+      const jvAmount = Math.round(jvData.totalThisPeriod * 100) / 100;
+
+      // Skip JV line items where Work Completed This Period is zero — exclude entirely
+      if (jvAmount === 0) continue;
+
+      // Use pre-resolved match (from LLM merge step or string match during merge)
+      let matchedSubNorm = jvData.matchedSubNorm || null;
+      let matchMethod = jvData.matchMethod || null;
+
+      if (matchedSubNorm) {
+        const subData = subMap[matchedSubNorm];
+        const subAmount = Math.round(subData.totalThisPeriod * 100) / 100;
+        const diff = Math.round((jvAmount - subAmount) * 100) / 100;
+        const pass = Math.abs(diff) <= TOLERANCE;
+
+        const appCount = subData.apps.length;
+        let remarks = "";
+        if (pass) {
+          remarks = appCount > 1
+            ? `Amounts match within ±$${TOLERANCE} tolerance (aggregated from ${appCount} sub pay apps)`
+            : `Amounts match within ±$${TOLERANCE} tolerance`;
+        } else {
+          remarks = `Variance of $${Math.abs(diff).toLocaleString()} detected`;
+          if (appCount > 1) remarks += ` (aggregated from ${appCount} sub pay apps)`;
+        }
+
+        results.push({
+          contractor_name: jvData.originalName,
+          sub_name: subData.originalName + (appCount > 1 ? ` (${appCount} apps)` : ""),
+          jv_this_period: jvAmount,
+          sub_this_period: subAmount,
+          difference: diff,
+          status: pass ? "Pass" : "Fail",
+          exception_category: pass ? null : "Observation",
+          remarks,
+          matched: true,
+          match_method: matchMethod,
+          pay_apps: subData.apps.map(a => ({
+            id: a.id,
+            subcontractor_name: a.subcontractor_name,
+            application_no: a.application_no,
+            application_date: a.application_date,
+            period_to: a.period_to,
+            completed_work_this_period: parseFloat(a.completed_work_this_period) || 0,
+            g703_work_this_period: parseFloat(a.g703_work_this_period) || 0,
+            start_page: a.start_page,
+            end_page: a.end_page,
+            document_type: a.document_type,
+            original_contract_sum: a.original_contract_sum,
+            contract_sum_to_date: a.contract_sum_to_date,
+            total_completed_stored: a.total_completed_stored,
+          })),
+          source_data: {
+            jv: buildJvSourceData(jvData.items),
+            sub: subData.apps.map(a => ({
+              id: a.id,
+              field: "g703_work_this_period",
+              value: parseFloat(a.g703_work_this_period) || parseFloat(a.completed_work_this_period) || 0,
+              page: a.start_page,
+              subcontractor_name: a.subcontractor_name,
+              application_no: a.application_no,
+            })),
+          },
+        });
+      } else {
+        results.push({
+          contractor_name: jvData.originalName,
+          sub_name: null,
+          jv_this_period: jvAmount,
+          sub_this_period: null,
+          difference: null,
+          status: "N/A",
+          exception_category: "Missing Document",
+          remarks: "Subcontractor Pay Application not found",
+          matched: false,
+          match_method: null,
+          pay_apps: [],
+          source_data: buildJvSourceData(jvData.items),
+        });
+      }
+    }
+
+    // Stats
+    const passCount = results.filter(r => r.status === "Pass").length;
+    const failCount = results.filter(r => r.status === "Fail").length;
+    const naCount = results.filter(r => r.status === "N/A").length;
+
+    res.json({
+      test_id: "PA-002",
+      test_name: "Reconcile JV Line Item to Subcontractor Pay Application(s)",
+      document_group: "Cross-document Reconciliation",
+      check_area: "Pay App Check",
+      test_type: "Value-to-Value",
+      contract_matrix_ref: "CON-SUB",
+      tolerance: "±$10",
+      run_date: new Date().toISOString(),
+      summary: { total: results.length, pass: passCount, fail: failCount, na: naCount },
+      results: results.sort((a, b) => {
+        if (a.status === "Fail" && b.status !== "Fail") return -1;
+        if (b.status === "Fail" && a.status !== "Fail") return 1;
+        return (b.jv_this_period || 0) - (a.jv_this_period || 0);
+      }),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Helper: build JV source data for detail view
+function buildJvSourceData(items) {
+  return items.map(li => ({
+    id: li.id,
+    field: "work_completed_this",
+    value: parseFloat(li.work_completed_this) || 0,
+    page: li.source_page,
+    contractor_name: li.contractor_name,
+    item_no: li.item_no,
+    scheduled_current: li.scheduled_current,
+    work_completed_prev: li.work_completed_prev,
+  }));
+}
+
+// LLM fuzzy matching: asks GPT to match JV names to sub names
+async function llmFuzzyMatch(jvNames, subNames) {
+  if (!jvNames.length || !subNames.length) return {};
+
+  const jvList = jvNames.map(n => n.orig);
+  const subList = subNames.map(n => n.orig);
+
+  const prompt = `You are a construction document analyst. Match the JV Pay App contractor names (left) to their corresponding Subcontractor Pay Application names (right).
+
+IMPORTANT RULES:
+1. Companies may have different formatting, abbreviations, or suffixes (Inc, LLC, Corp, etc.)
+2. MULTIPLE JV line items may refer to the SAME subcontractor (e.g. "SHAMBAUGH" and "SHAMBAUGH & SON" are the same company, "COASTAL MILLWORK" and "COASTAL MILLWORK & SUPPLY" are the same, "GULFSTREAM" and "GULF STREAM CONSTRUCTION COMPANY" are the same)
+3. If multiple JV names refer to the same sub, map ALL of them to that sub's letter
+4. Only include confident matches. Be strict — only match if they are clearly the same company.
+
+JV Contractor Names:
+${jvList.map((n, i) => `${i + 1}. ${n}`).join("\n")}
+
+Subcontractor Pay App Names:
+${subList.map((n, i) => `${String.fromCharCode(65 + i)}. ${n}`).join("\n")}
+
+Return ONLY a JSON object mapping JV index (1-based) to Sub letter. Multiple JV items CAN map to the same Sub letter.
+Example: {"1":"A","2":"A","3":"B","5":"C"}`;
+
+  try {
+    const response = await fetch(`${AZURE_OAI_ENDPOINT}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "api-key": AZURE_OAI_KEY,
+      },
+      body: JSON.stringify({
+        model: AZURE_OAI_DEPLOYMENT,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0,
+        max_completion_tokens: 2000,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("LLM match failed:", response.status, await response.text());
+      return {};
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || "";
+    // Extract JSON from response (may be large)
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return {};
+
+    const mapping = JSON.parse(jsonMatch[0]);
+    // Convert to jvNorm -> subNorm mapping
+    const result = {};
+    for (const [jvIdx, subLetter] of Object.entries(mapping)) {
+      const jvI = parseInt(jvIdx) - 1;
+      const subI = subLetter.charCodeAt(0) - 65;
+      if (jvI >= 0 && jvI < jvNames.length && subI >= 0 && subI < subNames.length) {
+        result[jvNames[jvI].norm] = subNames[subI].norm;
+      }
+    }
+    return result;
+  } catch (e) {
+    console.error("LLM fuzzy match error:", e.message);
+    return {};
+  }
+}
+
+// PATCH endpoint to update extracted values from test detail view
+app.patch("/api/projects/:id/line-items/:itemId", async (req, res) => {
+  try {
+    const db = await getDb();
+    const { itemId } = req.params;
+    const updates = req.body; // { field: value, ... }
+    const allowedFields = ["work_completed_this", "work_completed_prev", "materials_stored", "scheduled_current", "contractor_name"];
+    const setClauses = [];
+    const values = [];
+    for (const [field, value] of Object.entries(updates)) {
+      if (allowedFields.includes(field)) {
+        setClauses.push(`${field} = ?`);
+        values.push(value);
+      }
+    }
+    if (!setClauses.length) return res.status(400).json({ error: "No valid fields to update" });
+    values.push(itemId);
+    db.run(`UPDATE line_items SET ${setClauses.join(", ")} WHERE id = ?`, values);
+    saveDb(db);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch("/api/projects/:id/sub-apps/:appId", async (req, res) => {
+  try {
+    const db = await getDb();
+    const { appId } = req.params;
+    const updates = req.body;
+    const allowedFields = ["completed_work_this_period", "g703_work_this_period", "subcontractor_name", "total_completed_stored", "original_contract_sum", "contract_sum_to_date"];
+    const setClauses = [];
+    const values = [];
+    for (const [field, value] of Object.entries(updates)) {
+      if (allowedFields.includes(field)) {
+        setClauses.push(`${field} = ?`);
+        values.push(value);
+      }
+    }
+    if (!setClauses.length) return res.status(400).json({ error: "No valid fields to update" });
+    values.push(appId);
+    db.run(`UPDATE subcontractor_applications SET ${setClauses.join(", ")} WHERE id = ?`, values);
+    saveDb(db);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PA-003: Arithmetic Consistency Test — Continuation Sheet Line Items vs Grand Total
+// Sums all individual line item values per column and compares to the grand total / cover page
+// Runs for BOTH JV Pay App and each Subcontractor Pay App
+// ══════════════════════════════════════════════════════════════════════════════
+app.get("/api/projects/:id/tests/pa-003", async (req, res) => {
+  try {
+    const db = await getDb();
+    const projId = req.params.id;
+    const TOLERANCE = 10; // ±$10
+
+    const results = [];
+
+    // ── JV Pay App: sum line_items columns vs cover_page ──
+    const coverRows = query(db, "SELECT * FROM cover_page WHERE project_id=?", [projId]);
+    const lineItems = query(db, "SELECT * FROM line_items WHERE project_id=?", [projId]);
+
+    if (coverRows.length > 0 && lineItems.length > 0) {
+      const cover = coverRows[0];
+      // Sum line item columns
+      const jvSums = {
+        scheduled_current: 0,
+        work_completed_prev: 0,
+        work_completed_this: 0,
+        materials_stored: 0,
+        total_completed: 0,
+        balance_to_finish: 0,
+        retainage: 0,
+      };
+      for (const li of lineItems) {
+        jvSums.scheduled_current += parseFloat(li.scheduled_current) || 0;
+        jvSums.work_completed_prev += parseFloat(li.work_completed_prev) || 0;
+        jvSums.work_completed_this += parseFloat(li.work_completed_this) || 0;
+        jvSums.materials_stored += parseFloat(li.materials_stored) || 0;
+        jvSums.total_completed += parseFloat(li.total_completed) || 0;
+        jvSums.balance_to_finish += parseFloat(li.balance_to_finish) || 0;
+        jvSums.retainage += parseFloat(li.retainage) || 0;
+      }
+
+      // Compare against cover page values
+      const jvChecks = [
+        { column: "Contract Sum to Date (Scheduled Value)", sum: jvSums.scheduled_current, expected: cover.contract_sum_to_date },
+        { column: "Total Completed & Stored", sum: jvSums.total_completed, expected: cover.total_completed_stored },
+        { column: "Balance to Finish", sum: jvSums.balance_to_finish, expected: cover.balance_to_finish },
+        { column: "Total Retainage", sum: jvSums.retainage, expected: cover.total_retainage },
+      ];
+
+      for (const check of jvChecks) {
+        if (check.expected === null || check.expected === undefined) continue;
+        const sumVal = Math.round(check.sum * 100) / 100;
+        const expVal = Math.round(parseFloat(check.expected) * 100) / 100;
+        const diff = Math.round((sumVal - expVal) * 100) / 100;
+        const pass = Math.abs(diff) <= TOLERANCE;
+
+        results.push({
+          document: "JV Pay App",
+          app_name: cover.from_contractor || "JV Continuation Sheet",
+          app_id: null,
+          column: check.column,
+          line_items_sum: sumVal,
+          grand_total: expVal,
+          difference: diff,
+          line_count: lineItems.length,
+          status: pass ? "Pass" : "Fail",
+          remarks: pass
+            ? "Line items sum matches grand total within ±$" + TOLERANCE
+            : "Arithmetic mismatch: line items sum ≠ grand total (Δ $" + Math.abs(diff).toLocaleString() + ")",
+          source_data: {
+            line_items_count: lineItems.length,
+            cover_page_id: cover.id,
+            cover_source_page: cover.source_page,
+          },
+        });
+      }
+    }
+
+    // ── Subcontractor Pay Apps: sum sub_line_items columns vs g703 values ──
+    const subApps = query(db, "SELECT * FROM subcontractor_applications WHERE project_id=?", [projId]);
+    const allSubLines = query(db, "SELECT * FROM sub_line_items WHERE project_id=?", [projId]);
+
+    // Group sub line items by sub_app_id
+    const subLinesByApp = {};
+    for (const sl of allSubLines) {
+      if (!subLinesByApp[sl.sub_app_id]) subLinesByApp[sl.sub_app_id] = [];
+      subLinesByApp[sl.sub_app_id].push(sl);
+    }
+
+    for (const sa of subApps) {
+      const lines = subLinesByApp[sa.id] || [];
+      if (lines.length === 0) continue; // skip apps with no line items
+
+      // Sum line item columns
+      const sums = {
+        scheduled_value: 0,
+        work_completed_prev: 0,
+        work_completed_this: 0,
+        materials_stored: 0,
+        total_completed: 0,
+        retainage: 0,
+      };
+      for (const sl of lines) {
+        sums.scheduled_value += parseFloat(sl.scheduled_value) || 0;
+        sums.work_completed_prev += parseFloat(sl.work_completed_prev) || 0;
+        sums.work_completed_this += parseFloat(sl.work_completed_this) || 0;
+        sums.materials_stored += parseFloat(sl.materials_stored) || 0;
+        sums.total_completed += parseFloat(sl.total_completed) || 0;
+        sums.retainage += parseFloat(sl.retainage) || 0;
+      }
+
+      // Compare against G703 grand total fields in sub app
+      const subChecks = [
+        { column: "Scheduled Value", sum: sums.scheduled_value, expected: sa.g703_scheduled_value },
+        { column: "Work Completed - Previous", sum: sums.work_completed_prev, expected: sa.g703_work_prev },
+        { column: "Work Completed - This Period", sum: sums.work_completed_this, expected: sa.g703_work_this_period },
+        { column: "Materials Stored", sum: sums.materials_stored, expected: sa.g703_materials_stored },
+        { column: "Total Completed & Stored", sum: sums.total_completed, expected: sa.g703_total_completed },
+        { column: "Retainage", sum: sums.retainage, expected: sa.g703_retainage },
+      ];
+
+      for (const check of subChecks) {
+        if (check.expected === null || check.expected === undefined) continue;
+        const sumVal = Math.round(check.sum * 100) / 100;
+        const expVal = Math.round(parseFloat(check.expected) * 100) / 100;
+        const diff = Math.round((sumVal - expVal) * 100) / 100;
+        const pass = Math.abs(diff) <= TOLERANCE;
+
+        results.push({
+          document: "Sub Pay App",
+          app_name: sa.subcontractor_name,
+          app_id: sa.id,
+          column: check.column,
+          line_items_sum: sumVal,
+          grand_total: expVal,
+          difference: diff,
+          line_count: lines.length,
+          status: pass ? "Pass" : "Fail",
+          remarks: pass
+            ? "Line items sum matches G703 grand total within ±$" + TOLERANCE
+            : "Arithmetic mismatch: Σ line items ≠ G703 grand total (Δ $" + Math.abs(diff).toLocaleString() + ")",
+          source_data: {
+            sub_app_id: sa.id,
+            application_no: sa.application_no,
+            start_page: sa.start_page,
+            end_page: sa.end_page,
+            line_items_count: lines.length,
+          },
+        });
+      }
+    }
+
+    // Stats
+    const passCount = results.filter(r => r.status === "Pass").length;
+    const failCount = results.filter(r => r.status === "Fail").length;
+
+    res.json({
+      test_id: "PA-003",
+      test_name: "Arithmetic Consistency — Continuation Sheet vs Grand Total",
+      document_group: "Internal Consistency",
+      check_area: "Arithmetic Verification",
+      test_type: "Sum-to-Total",
+      contract_matrix_ref: "G703",
+      tolerance: "±$10",
+      run_date: new Date().toISOString(),
+      summary: { total: results.length, pass: passCount, fail: failCount, na: 0 },
+      results: results.sort((a, b) => {
+        if (a.status === "Fail" && b.status !== "Fail") return -1;
+        if (b.status === "Fail" && a.status !== "Fail") return 1;
+        return Math.abs(b.difference || 0) - Math.abs(a.difference || 0);
+      }),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
 // AI VALIDATION — Azure GPT-5.4 Vision validates extracted data against PDF images
 // Uses pre-cached page images from the notebook (gc_app12_page_images.json)
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1417,6 +1977,58 @@ app.patch("/api/projects/:id/subcontractor-applications/:appId", async (req, res
       [validation_status || "unchecked", validation_note || "", req.params.appId, req.params.id]);
     const rows = query(db, "SELECT * FROM subcontractor_applications WHERE id=?", [req.params.appId]);
     res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/projects/:id/sub-line-items — all sub line items (optionally filter by sub_app_id)
+app.get("/api/projects/:id/sub-line-items", async (req, res) => {
+  try {
+    const db = await getDb();
+    const appId = req.query.sub_app_id;
+    const rows = appId
+      ? query(db, "SELECT * FROM sub_line_items WHERE project_id=? AND sub_app_id=? ORDER BY id", [req.params.id, appId])
+      : query(db, "SELECT * FROM sub_line_items WHERE project_id=? ORDER BY sub_app_id, id", [req.params.id]);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/projects/:id/import-sub-line-items — bulk import sub line items
+app.post("/api/projects/:id/import-sub-line-items", async (req, res) => {
+  try {
+    const db = await getDb();
+    const projId = parseInt(req.params.id);
+    const items = req.body.items;
+    if (!Array.isArray(items)) return res.status(400).json({ error: "items array required" });
+
+    // Get a mapping of seq_id -> sub_app.id for this project
+    const apps = query(db, "SELECT id, seq_id FROM subcontractor_applications WHERE project_id=?", [projId]);
+    const seqToId = {};
+    for (const a of apps) seqToId[a.seq_id] = a.id;
+
+    // Clear existing line items for this project
+    run(db, "DELETE FROM sub_line_items WHERE project_id=?", [projId]);
+
+    let inserted = 0;
+    for (const item of items) {
+      const subAppId = seqToId[item.sub_id];
+      if (!subAppId) continue;
+      run(db, `INSERT INTO sub_line_items (project_id, sub_app_id, source_page, item_no, description,
+        scheduled_value, work_completed_prev, work_completed_this, materials_stored,
+        total_completed, pct_complete, retainage)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, [
+        projId, subAppId, item.source_page || null, item.item_no || "",
+        item.description || "", item.scheduled_value ?? null,
+        item.work_completed_prev ?? null, item.work_completed_this ?? null,
+        item.materials_stored ?? null, item.total_completed ?? null,
+        item.pct_complete ?? null, item.retainage ?? null,
+      ]);
+      inserted++;
+    }
+    res.json({ success: true, inserted });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

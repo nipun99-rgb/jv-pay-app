@@ -178,6 +178,27 @@ async function getDb() {
   try { _db.run("ALTER TABLE subcontractor_applications ADD COLUMN validation_status TEXT DEFAULT 'unchecked'"); } catch (e) {}
   try { _db.run("ALTER TABLE subcontractor_applications ADD COLUMN validation_note TEXT"); } catch (e) {}
 
+  // ── Sub line items — G703 continuation sheet rows per subcontractor ────────
+  _db.run(`
+    CREATE TABLE IF NOT EXISTS sub_line_items (
+      id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id             INTEGER NOT NULL,
+      sub_app_id             INTEGER NOT NULL,
+      source_page            INTEGER,
+      item_no                TEXT,
+      description            TEXT,
+      scheduled_value        REAL,
+      work_completed_prev    REAL,
+      work_completed_this    REAL,
+      materials_stored       REAL,
+      total_completed        REAL,
+      pct_complete           REAL,
+      retainage              REAL,
+      FOREIGN KEY (project_id) REFERENCES projects(id),
+      FOREIGN KEY (sub_app_id) REFERENCES subcontractor_applications(id)
+    );
+  `);
+
   // ── Project phases — track what files have been uploaded per project ───────
   _db.run(`
     CREATE TABLE IF NOT EXISTS project_phases (
