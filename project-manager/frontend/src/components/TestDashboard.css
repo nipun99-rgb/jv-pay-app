@@ -795,6 +795,21 @@
   letter-spacing: 0.03em;
 }
 
+/* ── Arithmetic source info ── */
+.td-arith-source p {
+  font-size: 12px;
+  color: #334155;
+  margin: 0;
+  line-height: 1.6;
+}
+.td-arith-source code {
+  background: #f1f5f9;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+  color: #6366f1;
+}
+
 /* ── Detail table (pay apps breakdown) ── */
 .td-detail-table {
   width: 100%;

@@ -29,15 +29,26 @@ const TEST_CATALOG = [
     endpoint: (projectId) => `${API}/projects/${projectId}/tests/pa-002`,
   },
   {
-    id: "PA-003",
-    name: "Arithmetic Consistency — Continuation Sheet vs Grand Total",
+    id: "PA-003a",
+    name: "JV Pay App — Arithmetic Consistency (Line Items vs Grand Total)",
     group: "Internal Consistency",
     area: "Arithmetic Verification",
     type: "Sum-to-Total",
-    description: "Sum all individual line item values on each Continuation Sheet (JV & Sub) and compare to the Grand Total row. Validates all numeric columns: Scheduled Value, Work Completed (Prev/This), Materials Stored, Total Completed, Balance to Finish, Retainage.",
-    contractRef: "G703",
+    description: "Sum all individual JV line item values on the Continuation Sheet and compare to the Grand Total on the G702 cover page. Validates: Scheduled Value, Total Completed, Balance to Finish, Retainage.",
+    contractRef: "G703-JV",
     tolerance: "±$10",
-    endpoint: (projectId) => `${API}/projects/${projectId}/tests/pa-003`,
+    endpoint: (projectId) => `${API}/projects/${projectId}/tests/pa-003a`,
+  },
+  {
+    id: "PA-003b",
+    name: "Subcontractor Pay Apps — Arithmetic Consistency (Line Items vs Grand Total)",
+    group: "Internal Consistency",
+    area: "Arithmetic Verification",
+    type: "Sum-to-Total",
+    description: "Sum all individual subcontractor line item values on each Continuation Sheet and compare to the G703 Grand Total row. Validates: Scheduled Value, Work Completed (Prev/This), Materials Stored, Total Completed, Retainage.",
+    contractRef: "G703-SUB",
+    tolerance: "±$10",
+    endpoint: (projectId) => `${API}/projects/${projectId}/tests/pa-003b`,
   },
 ];
 
@@ -179,14 +190,14 @@ function TestExecutionView({ test, projectId, onBack, onComplete }) {
                 <span className="td-results-count">{data.results.length} checks performed</span>
               </div>
 
-              {/* PA-003: Arithmetic table */}
-              {test.id === "PA-003" ? (
+              {/* PA-003a/b: Arithmetic table with expandable rows */}
+              {(test.id === "PA-003a" || test.id === "PA-003b") ? (
                 <div className="td-table-wrapper">
                   <table className="td-table">
                     <thead>
                       <tr>
+                        <th></th>
                         <th>Status</th>
-                        <th>Document</th>
                         <th>Pay App</th>
                         <th>Column</th>
                         <th className="td-r">Σ Line Items</th>
@@ -198,19 +209,36 @@ function TestExecutionView({ test, projectId, onBack, onComplete }) {
                     </thead>
                     <tbody>
                       {data.results.map((r, i) => (
-                        <tr key={i} className={r.status === "Fail" ? "td-row-fail" : ""}>
-                          <td><StatusBadge status={r.status} /></td>
-                          <td><span className={`td-doc-badge ${r.document === "JV Pay App" ? "td-doc-jv" : "td-doc-sub"}`}>{r.document}</span></td>
-                          <td className="td-name">{r.app_name}</td>
-                          <td className="td-col-name">{r.column}</td>
-                          <td className="td-r td-mono">{fmtMoney(r.line_items_sum)}</td>
-                          <td className="td-r td-mono">{fmtMoney(r.grand_total)}</td>
-                          <td className={`td-r td-mono ${r.difference && Math.abs(r.difference) > 10 ? "td-diff-bad" : ""}`}>
-                            {fmtMoney(r.difference)}
-                          </td>
-                          <td className="td-center">{r.line_count}</td>
-                          <td className="td-remarks">{r.remarks}</td>
-                        </tr>
+                        <>
+                          <tr
+                            key={i}
+                            className={`${r.status === "Fail" ? "td-row-fail" : ""} ${expandedRow === i ? "td-row-expanded" : ""} td-row-clickable`}
+                            onClick={() => setExpandedRow(expandedRow === i ? null : i)}
+                          >
+                            <td className="td-expand-cell">
+                              <span className={`td-expand-arrow ${expandedRow === i ? "open" : ""}`}>▶</span>
+                            </td>
+                            <td><StatusBadge status={r.status} /></td>
+                            <td className="td-name">{r.app_name}</td>
+                            <td className="td-col-name">{r.column}</td>
+                            <td className="td-r td-mono">{fmtMoney(r.line_items_sum)}</td>
+                            <td className="td-r td-mono">{fmtMoney(r.grand_total)}</td>
+                            <td className={`td-r td-mono ${r.difference && Math.abs(r.difference) > 10 ? "td-diff-bad" : ""}`}>
+                              {fmtMoney(r.difference)}
+                            </td>
+                            <td className="td-center">{r.line_count}</td>
+                            <td className="td-remarks">{r.remarks}</td>
+                          </tr>
+
+                          {/* Expanded: show source data (top contributing line items + grand total reference) */}
+                          {expandedRow === i && (
+                            <tr key={`detail-${i}`} className="td-detail-row">
+                              <td colSpan={9}>
+                                <ArithmeticRowDetail row={r} testId={test.id} />
+                              </td>
+                            </tr>
+                          )}
+                        </>
                       ))}
                     </tbody>
                   </table>
@@ -382,6 +410,73 @@ function RowDetail({ row, projectId, editingField, setEditingField, handleSave, 
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Arithmetic Row Detail (PA-003a/b expandable) ──────────────────────────
+function ArithmeticRowDetail({ row, testId }) {
+  const sd = row.source_data || {};
+  return (
+    <div className="td-row-detail">
+      {/* Grand Total Reference */}
+      <div className="td-detail-section">
+        <h4>Grand Total Source</h4>
+        <div className="td-arith-source">
+          {testId === "PA-003a" ? (
+            <p>
+              <strong>Cover Page (G702)</strong> — field: <code>{sd.cover_field}</code>, 
+              Page {sd.cover_page || "—"}, 
+              Value: <span className="td-mono">{fmtMoney(sd.cover_value)}</span>
+            </p>
+          ) : (
+            <p>
+              <strong>{sd.subcontractor_name}</strong> — G703 field: <code>{sd.g703_field}</code>, 
+              Pages {sd.start_page}–{sd.end_page}, App #{sd.application_no || "—"}, 
+              Value: <span className="td-mono">{fmtMoney(sd.g703_value)}</span>
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Top Contributing Line Items */}
+      {sd.top_items && sd.top_items.length > 0 && (
+        <div className="td-detail-section">
+          <h4>Top Contributing Line Items ({sd.line_items_count} total)</h4>
+          <table className="td-detail-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                {testId === "PA-003a" && <th>Contractor</th>}
+                {testId === "PA-003b" && <th>Description</th>}
+                <th>Item No</th>
+                <th>Page</th>
+                <th className="td-r">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sd.top_items.map((item, j) => (
+                <tr key={j}>
+                  <td>{j + 1}</td>
+                  {testId === "PA-003a" && <td>{item.contractor}</td>}
+                  {testId === "PA-003b" && <td className="td-name">{item.description || "—"}</td>}
+                  <td>{item.item_no || "—"}</td>
+                  <td>{item.page || "—"}</td>
+                  <td className="td-r td-mono">{fmtMoney(item.value)}</td>
+                </tr>
+              ))}
+              {sd.line_items_count > sd.top_items.length && (
+                <tr className="td-detail-total-row">
+                  <td colSpan={4}>
+                    <em>... and {sd.line_items_count - sd.top_items.length} more items</em>
+                  </td>
+                  <td className="td-r td-mono"><strong>Σ {fmtMoney(row.line_items_sum)}</strong></td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
