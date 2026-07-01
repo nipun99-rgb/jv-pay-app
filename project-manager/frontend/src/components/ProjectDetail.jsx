@@ -5,6 +5,8 @@ import OutputPanel from "./OutputPanel";
 import CoverPageTable from "./CoverPageTable";
 import JourneyPanel from "./JourneyPanel";
 import SubcontractorTable from "./SubcontractorTable";
+import SplitPane from "./SplitPane";
+import { TabBar, SummaryBar } from "./shared";
 
 const API = "/api";
 
@@ -33,7 +35,6 @@ export default function ProjectDetail({ project, onDelete, onBack, onProjectUpda
   const [showValidationLogs, setShowValidationLogs] = useState(false);
   const [validatingSubApps, setValidatingSubApps] = useState(false);
   const [showSubValidationLogs, setShowSubValidationLogs] = useState(false);
-  const [journeyCollapsed, setJourneyCollapsed] = useState(false);
   const [phases, setPhases]           = useState([]);
   const [subApps, setSubApps]         = useState([]);
   const [subPdfPage, setSubPdfPage]   = useState(1);
@@ -312,15 +313,7 @@ export default function ProjectDetail({ project, onDelete, onBack, onProjectUpda
           <span className="ws-baseline-tag">{localProject.baseline}</span>
         </div>
 
-        {/* Pipeline step chips */}
-        <div className="ws-progress">
-          {tasks.map((t) => (
-            <div key={t.id} className={`ws-chip ws-chip-${t.status}`} title={t.step_name}>
-              {t.status === "complete" ? "✓" : t.step_number}
-              <span className="ws-chip-label">{t.step_name}</span>
-            </div>
-          ))}
-        </div>
+        <div style={{ flex: 1 }} />
 
         <div className="ws-header-actions">
           <button className="ws-btn ws-btn-primary" onClick={() => setShowInputs(true)}>
@@ -382,6 +375,15 @@ export default function ProjectDetail({ project, onDelete, onBack, onProjectUpda
           )}
 
           <button className="ws-btn ws-btn-danger" onClick={handleDelete}>🗑</button>
+
+          <button
+            className="ws-btn ws-btn-dashboard"
+            disabled={!localProject.pdf_path || !hasSubPdf}
+            onClick={() => window.open(`/test-dashboard/${localProject.id}`, '_blank')}
+            title={!localProject.pdf_path || !hasSubPdf ? "Upload both Contractor and Subcontractor PDFs first" : "Open Test Dashboard"}
+          >
+            📊 Test Dashboard
+          </button>
         </div>
       </header>
 
@@ -465,233 +467,207 @@ export default function ProjectDetail({ project, onDelete, onBack, onProjectUpda
             phases={phases}
             activePhase={activePhase}
             onPhaseSelect={handlePhaseSelect}
-            collapsed={journeyCollapsed}
-            onToggleCollapse={() => setJourneyCollapsed(!journeyCollapsed)}
+            collapsed={false}
+            onToggleCollapse={() => {}}
             onPhasesUpdated={loadPhases}
           />
 
           {/* ── Phase 1: Contractor Payment Application ────────────────── */}
           {activePhase === 1 && (
-            <div className="ws-validate">
+            <SplitPane
+              defaultPct={50}
+              minPct={25}
+              maxPct={80}
+              left={
+                <div className="ws-validate-data">
 
-              {/* Left panel: tab bar + content */}
-              <div className="ws-validate-data">
-
-                {/* Tab bar */}
-                <div className="ws-tab-bar">
-                  <button
-                    className={`ws-tab${gcTab === "cover" ? " active" : ""}`}
-                    onClick={() => { setGcTab("cover"); setPdfPage(1); }}
-                  >
-                    <span className="ws-tab-icon">📋</span>
-                    <span className="ws-tab-text">Cover Page</span>
-                    <span className="ws-tab-badge">G702</span>
-                  </button>
-                  <button
-                    className={`ws-tab${gcTab === "continuation" ? " active" : ""}`}
-                    onClick={() => {
-                      setGcTab("continuation");
-                      if (relevantPages.length) setPdfPage(relevantPages[0]);
+                  {/* Tab bar — shared component */}
+                  <TabBar
+                    tabs={[
+                      { key: "cover", icon: "📋", label: "Cover Page", badge: "G702" },
+                      { key: "continuation", icon: "📊", label: "Continuation Sheet", badge: "G703" },
+                    ]}
+                    activeTab={gcTab}
+                    onTabChange={(key) => {
+                      setGcTab(key);
+                      if (key === "cover") setPdfPage(1);
+                      else if (relevantPages.length) setPdfPage(relevantPages[0]);
                     }}
-                  >
-                    <span className="ws-tab-icon">📊</span>
-                    <span className="ws-tab-text">Continuation Sheet</span>
-                    <span className="ws-tab-badge">G703</span>
-                  </button>
-                </div>
+                  />
 
-                {/* ── Cover Page ── */}
-                {gcTab === "cover" && (
-                  <>
-                    {/* Summary bar — matches subcontractor table style */}
-                    {coverStats && (
-                      <div className="sub-summary-bar">
-                        <div className="sub-stat">
-                          <span className="sub-stat-val">{fmtMoney(coverStats.contractSum)}</span>
-                          <span className="sub-stat-lbl">Contract Sum to Date</span>
-                        </div>
-                        <div className="sub-stat">
-                          <span className="sub-stat-val">{fmtMoney(coverStats.totalCompleted)}</span>
-                          <span className="sub-stat-lbl">Total Completed &amp; Stored</span>
-                        </div>
-                        <div className="sub-stat ok">
-                          <span className="sub-stat-val">{fmtMoney(coverStats.paymentDue)}</span>
-                          <span className="sub-stat-lbl">Current Payment Due</span>
-                        </div>
-                        <div className="sub-stat">
-                          <span className="sub-stat-val">{fmtMoney(coverStats.balance)}</span>
-                          <span className="sub-stat-lbl">Balance to Finish</span>
-                        </div>
-                      </div>
-                    )}
-                    {coverPage ? (
-                      <CoverPageTable coverPage={coverPage} onUpdate={handleUpdateCover} />
-                    ) : (
-                      <div className="data-table-container data-empty">
-                        <div className="data-empty-icon">📋</div>
-                        <h3>No cover page data</h3>
-                        <p>Run the pipeline to extract G702 cover page data.</p>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {/* ── Continuation Sheet ── */}
-                {gcTab === "continuation" && (
-                  <>
-                    {/* Summary bar — matches subcontractor table style */}
-                    <div className="sub-summary-bar">
-                      <div className="sub-stat">
-                        <span className="sub-stat-val">{lineItems.length}</span>
-                        <span className="sub-stat-lbl">Total Line Items</span>
-                      </div>
-                      <div className="sub-stat">
-                        <span className="sub-stat-val">{g703Stats.activeItems}</span>
-                        <span className="sub-stat-lbl">Active This Period</span>
-                      </div>
-                      <div className={`sub-stat${g703Stats.warn > 0 ? " warn" : " ok"}`}>
-                        <span className="sub-stat-val">{fmtMoney(g703Stats.thisPeriod)}</span>
-                        <span className="sub-stat-lbl">Work Completed This Period</span>
-                      </div>
-                      <div className="sub-stat">
-                        <span className="sub-stat-val">{fmtMoney(g703Stats.scheduled)}</span>
-                        <span className="sub-stat-lbl">Total Scheduled Value</span>
-                      </div>
-                    </div>
-
-                    {/* Filter bar */}
-                    <div className="ws-filter-bar">
-                      <button
-                        className={`ws-filter-btn${filterThisPeriod ? " active" : ""}`}
-                        onClick={() => setFilterThisPeriod(!filterThisPeriod)}
-                      >
-                        {filterThisPeriod ? "⚡ This Period Only" : "📋 All Items"}
-                      </button>
-                      <span className="ws-filter-info">
-                        {filterThisPeriod
-                          ? `${filteredItems.length} of ${lineItems.length} items with activity`
-                          : `${lineItems.length} total items`}
-                      </span>
-                      {lineItems.some(
-                        i => i.validation_status === "valid" || i.validation_status === "warning"
-                      ) && (
-                        <div className="ws-validation-summary">
-                          <span className="ws-vs-item ws-vs-valid">✓ {g703Stats.valid}</span>
-                          <span className="ws-vs-item ws-vs-warn">⚠ {g703Stats.warn}</span>
+                  {/* ── Cover Page ── */}
+                  {gcTab === "cover" && (
+                    <>
+                      {/* Summary bar — shared component */}
+                      {coverStats && (
+                        <SummaryBar stats={[
+                          { label: "Contract Sum to Date", value: fmtMoney(coverStats.contractSum) },
+                          { label: "Total Completed & Stored", value: fmtMoney(coverStats.totalCompleted) },
+                          { label: "Current Payment Due", value: fmtMoney(coverStats.paymentDue), variant: "ok" },
+                          { label: "Balance to Finish", value: fmtMoney(coverStats.balance) },
+                        ]} />
+                      )}
+                      {coverPage ? (
+                        <CoverPageTable coverPage={coverPage} onUpdate={handleUpdateCover} />
+                      ) : (
+                        <div className="data-table-container data-empty">
+                          <div className="data-empty-icon">📋</div>
+                          <h3>No cover page data</h3>
+                          <p>Run the pipeline to extract G702 cover page data.</p>
                         </div>
                       )}
-                    </div>
+                    </>
+                  )}
 
-                    <DataTable
-                      items={filteredItems}
-                      onUpdateItem={handleUpdateItem}
-                      onDeleteItem={handleDeleteItem}
-                      onAddItem={handleAddItem}
-                      onRowClick={handleRowClick}
-                      activePage={pdfPage}
-                      onRevalidateItem={handleRevalidateItem}
-                    />
-                  </>
-                )}
-              </div>
+                  {/* ── Continuation Sheet ── */}
+                  {gcTab === "continuation" && (
+                    <>
+                      {/* Summary bar — shared component */}
+                      <SummaryBar stats={[
+                        { label: "Total Line Items", value: lineItems.length },
+                        { label: "Active This Period", value: g703Stats.activeItems },
+                        { label: "Work Completed This Period", value: fmtMoney(g703Stats.thisPeriod), variant: g703Stats.warn > 0 ? "warn" : "ok" },
+                        { label: "Total Scheduled Value", value: fmtMoney(g703Stats.scheduled) },
+                      ]} />
 
-              {/* Right panel: PDF viewer */}
-              <div className="ws-validate-pdf">
-                {showValidationLogs ? (
-                  <OutputPanel projectId={localProject.id} visible={true} />
-                ) : (
-                  <>
-                    <div className="ws-pdf-bar">
-                      <span className="ws-pdf-title">📄 Source PDF</span>
-                      <div className="ws-pdf-nav">
-                        {gcTab === "cover" ? (
-                          <span className="ws-page-display">Page 1 — Cover</span>
-                        ) : (
-                          <>
-                            <button
-                              className="ws-pdf-nav-btn"
-                              onClick={goToPrevPage}
-                              disabled={!relevantPages.length || pdfPage <= relevantPages[0]}
-                            >◀</button>
-                            <span className="ws-page-display">
-                              Page {pdfPage} of {relevantPages[relevantPages.length - 1] || "?"}
-                            </span>
-                            <button
-                              className="ws-pdf-nav-btn"
-                              onClick={goToNextPage}
-                              disabled={!relevantPages.length || pdfPage >= relevantPages[relevantPages.length - 1]}
-                            >▶</button>
-                          </>
+                      {/* Filter bar */}
+                      <div className="ws-filter-bar">
+                        <button
+                          className={`ws-filter-btn${filterThisPeriod ? " active" : ""}`}
+                          onClick={() => setFilterThisPeriod(!filterThisPeriod)}
+                        >
+                          {filterThisPeriod ? "⚡ This Period Only" : "📋 All Items"}
+                        </button>
+                        <span className="ws-filter-info">
+                          {filterThisPeriod
+                            ? `${filteredItems.length} of ${lineItems.length} items with activity`
+                            : `${lineItems.length} total items`}
+                        </span>
+                        {lineItems.some(
+                          i => i.validation_status === "valid" || i.validation_status === "warning"
+                        ) && (
+                          <div className="ws-validation-summary">
+                            <span className="ws-vs-item ws-vs-valid">✓ {g703Stats.valid}</span>
+                            <span className="ws-vs-item ws-vs-warn">⚠ {g703Stats.warn}</span>
+                          </div>
                         )}
                       </div>
-                    </div>
-                    {localProject.pdf_path ? (
-                      <iframe
-                        className="ws-pdf-frame"
-                        src={
-                          gcTab === "cover"
-                            ? `/api/projects/${localProject.id}/pdf/pages?from=1&to=1`
-                            : `/api/projects/${localProject.id}/pdf/pages?from=${pdfPage}&to=${pdfPage}`
-                        }
-                        key={gcTab === "cover" ? "cover-only" : `page-${pdfPage}`}
-                        title="PDF"
+
+                      <DataTable
+                        items={filteredItems}
+                        onUpdateItem={handleUpdateItem}
+                        onDeleteItem={handleDeleteItem}
+                        onAddItem={handleAddItem}
+                        onRowClick={handleRowClick}
+                        activePage={pdfPage}
+                        onRevalidateItem={handleRevalidateItem}
                       />
-                    ) : (
-                      <div className="ws-pdf-empty">
-                        <p>No PDF uploaded yet.</p>
+                    </>
+                  )}
+                </div>
+              }
+              right={
+                <div className="ws-validate-pdf">
+                  {showValidationLogs ? (
+                    <OutputPanel projectId={localProject.id} visible={true} />
+                  ) : (
+                    <>
+                      <div className="ws-pdf-bar">
+                        <span className="ws-pdf-title">📄 Source PDF</span>
+                        <div className="ws-pdf-nav">
+                          {gcTab === "cover" ? (
+                            <span className="ws-page-display">Page 1 — Cover</span>
+                          ) : (
+                            <>
+                              <button
+                                className="ws-pdf-nav-btn"
+                                onClick={goToPrevPage}
+                                disabled={!relevantPages.length || pdfPage <= relevantPages[0]}
+                              >◀</button>
+                              <span className="ws-page-display">
+                                Page {pdfPage} of {relevantPages[relevantPages.length - 1] || "?"}
+                              </span>
+                              <button
+                                className="ws-pdf-nav-btn"
+                                onClick={goToNextPage}
+                                disabled={!relevantPages.length || pdfPage >= relevantPages[relevantPages.length - 1]}
+                              >▶</button>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
+                      {localProject.pdf_path ? (
+                        <iframe
+                          className="ws-pdf-frame"
+                          src={
+                            gcTab === "cover"
+                              ? `/api/projects/${localProject.id}/pdf/pages?from=1&to=1`
+                              : `/api/projects/${localProject.id}/pdf/pages?from=${pdfPage}&to=${pdfPage}`
+                          }
+                          key={gcTab === "cover" ? "cover-only" : `page-${pdfPage}`}
+                          title="PDF"
+                        />
+                      ) : (
+                        <div className="ws-pdf-empty">
+                          <p>No PDF uploaded yet.</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              }
+            />
           )}
 
           {/* ── Phase 2: Subcontractor Payment Application ─────────────── */}
           {activePhase === 2 && (
-            <div className="ws-validate">
-
-              {/* Left panel: subcontractor table */}
-              <div className="ws-validate-data">
-                <SubcontractorTable
-                  apps={subApps}
-                  onPageClick={(page) => setSubPdfPage(page)}
-                  onUpdateValidation={handleUpdateSubValidation}
-                />
-              </div>
-
-              {/* Right panel: subcontractor PDF */}
-              <div className="ws-validate-pdf">
-                <div className="ws-pdf-bar">
-                  <span className="ws-pdf-title">📄 Subcontractor PDF</span>
-                  {hasSubPdf && (
-                    <div className="ws-pdf-nav">
-                      <span className="ws-page-display">Page {subPdfPage}</span>
+            <SplitPane
+              defaultPct={50}
+              minPct={25}
+              maxPct={80}
+              left={
+                <div className="ws-validate-data">
+                  <SubcontractorTable
+                    apps={subApps}
+                    projectId={localProject.id}
+                    onPageClick={(page) => setSubPdfPage(page)}
+                    onUpdateValidation={handleUpdateSubValidation}
+                  />
+                </div>
+              }
+              right={
+                <div className="ws-validate-pdf">
+                  <div className="ws-pdf-bar">
+                    <span className="ws-pdf-title">📄 Subcontractor PDF</span>
+                    {hasSubPdf && (
+                      <div className="ws-pdf-nav">
+                        <span className="ws-page-display">Page {subPdfPage}</span>
+                      </div>
+                    )}
+                  </div>
+                  {(showSubValidationLogs) ? (
+                    <OutputPanel projectId={localProject.id} visible={true} />
+                  ) : hasSubPdf ? (
+                    <iframe
+                      className="ws-pdf-frame"
+                      src={`/api/projects/${localProject.id}/pdf/pages?from=${subPdfPage}&to=${subPdfPage}&src=sub`}
+                      key={`sub-page-${subPdfPage}`}
+                      title="Subcontractor PDF"
+                    />
+                  ) : (
+                    <div className="ws-pdf-empty">
+                      <div className="ws-pdf-empty-inner">
+                        <div className="ws-pdf-empty-icon">📄</div>
+                        <p className="ws-pdf-empty-title">No subcontractor PDF</p>
+                        <p className="ws-pdf-empty-hint">
+                          Upload a PDF using the journey panel above to view it here.
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
-                {(showSubValidationLogs) ? (
-                  <OutputPanel projectId={localProject.id} visible={true} />
-                ) : hasSubPdf ? (
-                  <iframe
-                    className="ws-pdf-frame"
-                    src={`/api/projects/${localProject.id}/pdf/pages?from=${subPdfPage}&to=${subPdfPage}&src=sub`}
-                    key={`sub-page-${subPdfPage}`}
-                    title="Subcontractor PDF"
-                  />
-                ) : (
-                  <div className="ws-pdf-empty">
-                    <div className="ws-pdf-empty-inner">
-                      <div className="ws-pdf-empty-icon">📄</div>
-                      <p className="ws-pdf-empty-title">No subcontractor PDF</p>
-                      <p className="ws-pdf-empty-hint">
-                        Upload a PDF using the journey panel above to view it here.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+              }
+            />
           )}
 
           {/* ── Phase 3: GC GR ────────────────────────────────────────── */}

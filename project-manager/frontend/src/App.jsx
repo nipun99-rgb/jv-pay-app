@@ -3,10 +3,18 @@ import Sidebar from "./components/Sidebar";
 import ProjectTiles from "./components/ProjectTiles";
 import ProjectDetail from "./components/ProjectDetail";
 import NewProjectModal from "./components/NewProjectModal";
+import TestDashboard from "./components/TestDashboard";
 
 const API = "/api";
 
 export default function App() {
+  // Check if we're on the test-dashboard route
+  const pathMatch = window.location.pathname.match(/^\/test-dashboard\/(\d+)/);
+  if (pathMatch) {
+    // Render test dashboard full-screen, no sidebar
+    return <TestDashboard projectIdOverride={pathMatch[1]} />;
+  }
+
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
   const [showModal, setShowModal] = useState(false);

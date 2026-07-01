@@ -180,14 +180,6 @@ export default function JourneyPanel({
             );
           })}
         </div>
-
-        <button
-          className="jstrip-collapse-btn"
-          onClick={onToggleCollapse}
-          title="Toggle journey panel"
-        >
-          {collapsed ? "▼ Show" : "▲ Hide"}
-        </button>
       </div>
 
       {/* ── Phase 2 setup area (when active + not complete + not collapsed) ── */}

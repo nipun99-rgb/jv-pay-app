@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   Journey Strip — inline collapsible stepper above data content
+   Journey Strip — ultra-compact inline stepper
    ══════════════════════════════════════════════════════════════════════════ */
 
 .jstrip {
@@ -13,15 +13,15 @@
 .jstrip-header {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 10px 20px;
-  min-height: 56px;
+  gap: 12px;
+  padding: 6px 16px;
+  min-height: 40px;
 }
 
 .jstrip-title {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   color: #94a3b8;
   white-space: nowrap;
   flex-shrink: 0;
@@ -47,7 +47,7 @@
 /* Connector line between cards */
 .jstrip-connector {
   flex-shrink: 0;
-  width: 24px;
+  width: 16px;
   height: 2px;
   background: #e2e8f0;
 }
@@ -56,19 +56,19 @@
   background: #86efac;
 }
 
-/* Phase card button */
+/* Phase card button — compact pill */
 .jstrip-card {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex: 1;
   min-width: 0;
-  padding: 8px 12px;
+  padding: 5px 10px;
   background: #f8fafc;
   border: 1.5px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
   text-align: left;
   position: relative;
   overflow: hidden;
@@ -79,17 +79,17 @@
   background: #f1f5f9;
 }
 
-/* Active phase — filled blue to clearly show selection */
+/* Active phase */
 .jcard-active {
-  border-color: #2563eb !important;
-  background: #2563eb !important;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35) !important;
+  border-color: #4f46e5 !important;
+  background: #4f46e5 !important;
+  box-shadow: 0 1px 6px rgba(79, 70, 229, 0.3) !important;
 }
 
 .jcard-active .jcard-name  { color: #ffffff !important; }
-.jcard-active .jcard-meta  { color: #bfdbfe !important; }
+.jcard-active .jcard-meta  { color: #c7d2fe !important; }
 .jcard-active .jcard-circle {
-  background: rgba(255,255,255,0.25) !important;
+  background: rgba(255,255,255,0.2) !important;
   color: #ffffff !important;
 }
 
@@ -132,13 +132,13 @@
 /* ── Circle ───────────────────────────────────────────────────────────── */
 .jcard-circle {
   flex-shrink: 0;
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
   background: #e2e8f0;
   color: #64748b;
@@ -172,23 +172,22 @@
 }
 
 .jcard-name {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: #1e293b;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.3;
+  line-height: 1.2;
 }
 
 .jcard-meta {
-  font-size: 11px;
+  font-size: 10px;
   color: #64748b;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 2px;
-  line-height: 1.3;
+  line-height: 1.2;
 }
 
 /* ── Status dot (top-right corner) ───────────────────────────────────── */
@@ -214,29 +213,9 @@
   50%       { opacity: 0.5; transform: scale(1.3); }
 }
 
-/* ── Collapse toggle ──────────────────────────────────────────────────── */
-.jstrip-collapse-btn {
-  flex-shrink: 0;
-  background: transparent;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  padding: 5px 12px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #64748b;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.jstrip-collapse-btn:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
-}
-
-/* Collapsed state — no extra space */
+/* Collapsed state — compact */
 .jstrip-collapsed .jstrip-header {
-  padding-bottom: 10px;
+  padding-bottom: 6px;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
