@@ -1,0 +1,49 @@
+# Node modules
+node_modules/
+*/node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Binary files / PDFs
+project-manager/backend/uploads/*.pdf
+Test Files/*.pdf
+
+# SQLite databases
+*.db
+
+# Temp/lock files
+~$*
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+
+# Large JSON cache files
+*_ocr_cache.json
+*_page_images.json
+payapp12_extract_cache.json
+payapp12_page_texts_cache.json
+payapp12_scan_cache.json
+gc_app12_g703_checkpoint.json
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+npm-debug.log*
