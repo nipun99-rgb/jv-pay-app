@@ -167,10 +167,16 @@ async function getDb() {
       architect_signature         TEXT,
       notarized                   TEXT,
       additional_supporting_docs  TEXT,
+      validation_status           TEXT DEFAULT 'unchecked',
+      validation_note             TEXT,
       raw_json                    TEXT,
       FOREIGN KEY (project_id) REFERENCES projects(id)
     );
   `);
+
+  // ── Migrate: add validation columns to existing subcontractor_applications rows ──
+  try { _db.run("ALTER TABLE subcontractor_applications ADD COLUMN validation_status TEXT DEFAULT 'unchecked'"); } catch (e) {}
+  try { _db.run("ALTER TABLE subcontractor_applications ADD COLUMN validation_note TEXT"); } catch (e) {}
 
   // ── Project phases — track what files have been uploaded per project ───────
   _db.run(`

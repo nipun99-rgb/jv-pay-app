@@ -202,13 +202,23 @@ app.get("/api/projects/:id/sub-pdf", async (req, res) => {
   }
 });
 
-// ── GET /api/projects/:id/pdf/pages?from=1&to=1 — serve specific page range ─
+// ── GET /api/projects/:id/pdf/pages?from=1&to=1&src=sub — serve page range ──
 app.get("/api/projects/:id/pdf/pages", async (req, res) => {
   try {
     const db = await getDb();
-    const rows = query(db, "SELECT pdf_path FROM projects WHERE id = ?", [req.params.id]);
-    if (rows.length === 0) return res.status(404).json({ error: "Project not found" });
-    const pdfPath = rows[0].pdf_path;
+    let pdfPath;
+
+    if (req.query.src === "sub") {
+      // Serve from the subcontractor PDF (phase 2)
+      const rows = query(db, "SELECT pdf_path FROM project_phases WHERE project_id=? AND phase_number=2", [req.params.id]);
+      if (!rows.length || !rows[0].pdf_path) return res.status(404).json({ error: "No subcontractor PDF" });
+      pdfPath = rows[0].pdf_path;
+    } else {
+      const rows = query(db, "SELECT pdf_path FROM projects WHERE id = ?", [req.params.id]);
+      if (rows.length === 0) return res.status(404).json({ error: "Project not found" });
+      pdfPath = rows[0].pdf_path;
+    }
+
     if (!pdfPath || !fs.existsSync(pdfPath))
       return res.status(404).json({ error: "PDF not configured or file not found" });
 
@@ -1393,6 +1403,230 @@ app.get("/api/projects/:id/subcontractor-applications", async (req, res) => {
     const db   = await getDb();
     const rows = query(db, "SELECT * FROM subcontractor_applications WHERE project_id=? ORDER BY seq_id", [req.params.id]);
     res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/projects/:id/subcontractor-applications/:appId — update validation status
+app.patch("/api/projects/:id/subcontractor-applications/:appId", async (req, res) => {
+  try {
+    const db = await getDb();
+    const { validation_status, validation_note } = req.body;
+    run(db, "UPDATE subcontractor_applications SET validation_status=?, validation_note=? WHERE id=? AND project_id=?",
+      [validation_status || "unchecked", validation_note || "", req.params.appId, req.params.id]);
+    const rows = query(db, "SELECT * FROM subcontractor_applications WHERE id=?", [req.params.appId]);
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/projects/:id/validate-ai/subcontractors — AI validation for subcontractor apps
+app.post("/api/projects/:id/validate-ai/subcontractors", async (req, res) => {
+  const projectId = req.params.id;
+  try {
+    const db = await getDb();
+
+    // Get sub PDF path
+    const phaseRows = query(db, "SELECT pdf_path FROM project_phases WHERE project_id=? AND phase_number=2", [projectId]);
+    if (!phaseRows.length || !phaseRows[0].pdf_path)
+      return res.status(400).json({ error: "No subcontractor PDF uploaded" });
+
+    res.json({ success: true, message: "Subcontractor AI validation started" });
+
+    const log = (level, message) => {
+      run(db, "INSERT INTO logs (project_id, level, message) VALUES (?, ?, ?)", [projectId, level, message]);
+    };
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    log("step", "🤖 AI Validation — Subcontractor Pay Apps starting…");
+    log("info", `Model: ${AZURE_OAI_DEPLOYMENT} (GPT-5.4 Vision)`);
+    await wait(300);
+
+    const subPdfPath = phaseRows[0].pdf_path;
+
+    // Load all apps first so we know which pages we actually need
+    const apps = query(db, "SELECT * FROM subcontractor_applications WHERE project_id=? ORDER BY seq_id", [projectId]);
+    if (!apps.length) { log("warn", "No subcontractor applications to validate"); return; }
+
+    // Collect only the pages we need (cover page + up to 2 more per app = ~3 pages each)
+    const neededPages = new Set();
+    for (const app of apps) {
+      const start = app.start_page || 1;
+      const end   = Math.min(app.end_page || start, start + 2); // max 3 pages per app
+      for (let p = start; p <= end; p++) neededPages.add(p);
+    }
+    const neededList = [...neededPages].sort((a,b) => a-b);
+    log("info", `Rendering ${neededList.length} pages needed for validation (of ${neededPages.size} unique)…`);
+
+    // Check in-memory cache first, then render only missing pages
+    const subCacheKey = `${projectId}_sub`;
+    if (!_pageImagesCacheMap[subCacheKey]) _pageImagesCacheMap[subCacheKey] = {};
+    const subImages = _pageImagesCacheMap[subCacheKey];
+
+    const missingPages = neededList.filter(p => !subImages[String(p)]);
+
+    if (missingPages.length > 0) {
+      log("progress", `📄 Rendering ${missingPages.length} pages via Vision (fast — only needed pages)…`);
+
+      const pyCode = `
+import fitz, json, base64, sys
+doc = fitz.open(sys.argv[1])
+pages_to_render = [int(x) for x in sys.argv[2].split(',')]
+result = {}
+for p in pages_to_render:
+    try:
+        page = doc[p-1]
+        mat = fitz.Matrix(150/72, 150/72)
+        pix = page.get_pixmap(matrix=mat)
+        if pix.colorspace and pix.colorspace.name not in ('DeviceRGB','RGB'): pix = fitz.Pixmap(fitz.csRGB, pix)
+        if pix.alpha: pix = fitz.Pixmap(pix, 0)
+        result[str(p)] = base64.b64encode(pix.tobytes('jpeg')).decode()
+    except Exception as e:
+        import sys as _sys; _sys.stderr.write(f'page {p}: {e}\\n')
+import sys as _sys; _sys.stdout.write(json.dumps(result))`.trim();
+
+      const pyScriptPath = path.join(__dirname, "_render_sub_pages_tmp.py");
+      fs.writeFileSync(pyScriptPath, pyCode);
+
+      const { execFile } = require("child_process");
+      const tryPy = (exe) => new Promise((resolve) => {
+        execFile(exe, [pyScriptPath, subPdfPath, missingPages.join(",")], { timeout: 120000, maxBuffer: 256 * 1024 * 1024 }, (err, stdout) => {
+          if (err) return resolve(null);
+          try { resolve(JSON.parse(stdout)); } catch { resolve(null); }
+        });
+      });
+
+      let rendered = null;
+      for (const exe of PYTHON_CANDIDATES) { rendered = await tryPy(exe); if (rendered !== null) break; }
+      try { fs.unlinkSync(pyScriptPath); } catch (_) {}
+
+      if (!rendered) {
+        log("error", "Could not render PDF pages — ensure Python + pymupdf are installed.");
+        return;
+      }
+      // Merge into cache
+      Object.assign(subImages, rendered);
+      log("success", `✓ Rendered ${Object.keys(rendered).length} pages`);
+    } else {
+      log("success", `✓ All ${neededList.length} pages already cached`);
+    }
+    await wait(200);
+
+    log("info", `Validating ${apps.length} subcontractor pay applications…`);
+    run(db, "UPDATE subcontractor_applications SET validation_status='checking' WHERE project_id=?", [projectId]);
+
+    const { default: OpenAI } = await import("openai");
+    const openai = new OpenAI({ baseURL: AZURE_OAI_ENDPOINT, apiKey: AZURE_OAI_KEY });
+
+    const SUB_SYSTEM = `You are a construction payment application auditor. You verify extracted subcontractor pay application data against the original PDF pages.
+For each pay application you will see:
+- The extracted header values (G702 cover page fields)
+- The extracted G703 grand totals
+You must verify these against what you see in the provided PDF page image(s).
+Allow ±$1 rounding tolerance. Only flag "warning" if a value is genuinely incorrect.
+Return ONLY a JSON object: {"status": "valid"|"warning", "note": "brief summary of issues found (empty string if valid)"}`;
+
+    let validCount = 0, warnCount = 0;
+
+    async function validateApp(app) {
+      const pages = [];
+      for (let p = (app.start_page || 1); p <= Math.min((app.end_page || app.start_page || 1), (app.start_page || 1) + 2); p++) {
+        const b64 = subImages[String(p)];
+        if (b64) pages.push({ page: p, b64 });
+      }
+      if (!pages.length) {
+        run(db, "UPDATE subcontractor_applications SET validation_status='unchecked', validation_note=? WHERE id=?",
+          ["No page image available", app.id]);
+        return;
+      }
+
+      const appDesc = `Subcontractor: ${app.subcontractor_name}
+App No: ${app.application_no} | Period To: ${app.period_to}
+Contract Sum to Date: $${app.contract_sum_to_date ?? ""}
+Total Completed & Stored: $${app.total_completed_stored ?? ""}
+This Period: $${app.completed_work_this_period ?? ""}
+Total Retainage: $${app.total_retainage ?? ""}
+Total Earned Less Ret: $${app.total_earned_less_retainage ?? ""}
+Less Prev Certificates: $${app.less_prev_certificates ?? ""}
+Current Payment Due: $${app.current_payment_due ?? ""}
+Balance to Finish: $${app.balance_to_finish ?? ""}
+Contractor Signature: ${app.contractor_signature}  |  Architect Signature: ${app.architect_signature}
+G703 Scheduled Value: $${app.g703_scheduled_value ?? ""}
+G703 This Period: $${app.g703_work_this_period ?? ""}
+G703 Total Completed: $${app.g703_total_completed ?? ""}
+Recon (G702 vs G703): ${app.recon_flag}`;
+
+      try {
+        const imageContent = pages.map(p => ({
+          type: "input_image",
+          image_url: `data:image/jpeg;base64,${p.b64}`
+        }));
+        const resp = await openai.responses.create({
+          model: AZURE_OAI_DEPLOYMENT,
+          instructions: SUB_SYSTEM,
+          input: [{
+            role: "user",
+            content: [
+              { type: "input_text", text: `Verify this extracted pay application data against pages ${pages.map(p=>p.page).join(",")}:\n\n${appDesc}` },
+              ...imageContent,
+            ],
+          }],
+          temperature: 0,
+          max_output_tokens: 500,
+        });
+        const raw = (resp.output_text || "").trim().replace(/^```json\n?/i,"").replace(/```$/i,"").trim();
+        const result = JSON.parse(raw);
+        const status = result.status === "valid" ? "valid" : "warning";
+        const note = (result.note || "").slice(0, 500);
+        run(db, "UPDATE subcontractor_applications SET validation_status=?, validation_note=? WHERE id=?",
+          [status, note, app.id]);
+        if (status === "valid") validCount++; else warnCount++;
+        log(status === "valid" ? "success" : "warn",
+          `[${app.seq_id}] ${app.subcontractor_name?.slice(0,25) || "?"}: ${status === "valid" ? "✓ Valid" : `⚠ ${note.slice(0,80)}`}`);
+      } catch (e) {
+        run(db, "UPDATE subcontractor_applications SET validation_status='unchecked', validation_note=? WHERE id=?",
+          [`Error: ${e.message.slice(0,200)}`, app.id]);
+        log("error", `[${app.seq_id}] ${app.subcontractor_name?.slice(0,20) || "?"}: failed — ${e.message.slice(0,60)}`);
+      }
+    }
+
+    // Process apps with concurrency 3
+    async function runPool(tasks, concurrency) {
+      const queue = [...tasks];
+      const running = new Set();
+      while (queue.length > 0 || running.size > 0) {
+        while (queue.length > 0 && running.size < concurrency) {
+          const t = queue.shift();
+          const p = t().finally(() => running.delete(p));
+          running.add(p);
+        }
+        if (running.size > 0) await Promise.race(running);
+      }
+    }
+
+    await runPool(apps.map(app => () => validateApp(app)), 3);
+
+    log("step", `✅ Subcontractor validation complete — ✓ ${validCount} valid, ⚠ ${warnCount} warnings`);
+  } catch (err) {
+    console.error("Sub validation error:", err);
+    try {
+      const db2 = await getDb();
+      run(db2, "INSERT INTO logs (project_id, level, message) VALUES (?,?,?)",
+        [projectId, "error", `Sub validation failed: ${err.message}`]);
+    } catch (_) {}
+  }
+});
+
+// GET /api/projects/:id/sub-validation-summary
+app.get("/api/projects/:id/sub-validation-summary", async (req, res) => {
+  try {
+    const db = await getDb();
+    const rows = query(db, "SELECT validation_status FROM subcontractor_applications WHERE project_id=?", [req.params.id]);
+    const summary = { total: rows.length, valid: 0, warning: 0, unchecked: 0, checking: 0 };
+    for (const r of rows) { const s = r.validation_status || "unchecked"; summary[s] = (summary[s]||0)+1; }
+    res.json(summary);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
