@@ -1116,34 +1116,21 @@ app.patch("/api/projects/:id/sub-apps/:appId", async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// PA-003: Arithmetic Consistency Test — Continuation Sheet Line Items vs Grand Total
-// Sums all individual line item values per column and compares to the grand total / cover page
-// Runs for BOTH JV Pay App and each Subcontractor Pay App
+// PA-003a: Arithmetic Consistency — JV Pay App Continuation Sheet vs Grand Total
 // ══════════════════════════════════════════════════════════════════════════════
-app.get("/api/projects/:id/tests/pa-003", async (req, res) => {
+app.get("/api/projects/:id/tests/pa-003a", async (req, res) => {
   try {
     const db = await getDb();
     const projId = req.params.id;
-    const TOLERANCE = 10; // ±$10
-
+    const TOLERANCE = 10;
     const results = [];
 
-    // ── JV Pay App: sum line_items columns vs cover_page ──
     const coverRows = query(db, "SELECT * FROM cover_page WHERE project_id=?", [projId]);
     const lineItems = query(db, "SELECT * FROM line_items WHERE project_id=?", [projId]);
 
     if (coverRows.length > 0 && lineItems.length > 0) {
       const cover = coverRows[0];
-      // Sum line item columns
-      const jvSums = {
-        scheduled_current: 0,
-        work_completed_prev: 0,
-        work_completed_this: 0,
-        materials_stored: 0,
-        total_completed: 0,
-        balance_to_finish: 0,
-        retainage: 0,
-      };
+      const jvSums = { scheduled_current: 0, work_completed_prev: 0, work_completed_this: 0, materials_stored: 0, total_completed: 0, balance_to_finish: 0, retainage: 0 };
       for (const li of lineItems) {
         jvSums.scheduled_current += parseFloat(li.scheduled_current) || 0;
         jvSums.work_completed_prev += parseFloat(li.work_completed_prev) || 0;
@@ -1154,12 +1141,14 @@ app.get("/api/projects/:id/tests/pa-003", async (req, res) => {
         jvSums.retainage += parseFloat(li.retainage) || 0;
       }
 
-      // Compare against cover page values
       const jvChecks = [
-        { column: "Contract Sum to Date (Scheduled Value)", sum: jvSums.scheduled_current, expected: cover.contract_sum_to_date },
-        { column: "Total Completed & Stored", sum: jvSums.total_completed, expected: cover.total_completed_stored },
-        { column: "Balance to Finish", sum: jvSums.balance_to_finish, expected: cover.balance_to_finish },
-        { column: "Total Retainage", sum: jvSums.retainage, expected: cover.total_retainage },
+        { column: "Scheduled Value (Current)", field: "scheduled_current", sum: jvSums.scheduled_current, expected: cover.contract_sum_to_date, coverField: "contract_sum_to_date" },
+        { column: "Work Completed - Previous", field: "work_completed_prev", sum: jvSums.work_completed_prev, expected: null, coverField: null },
+        { column: "Work Completed - This Period", field: "work_completed_this", sum: jvSums.work_completed_this, expected: null, coverField: null },
+        { column: "Materials Stored", field: "materials_stored", sum: jvSums.materials_stored, expected: null, coverField: null },
+        { column: "Total Completed & Stored", field: "total_completed", sum: jvSums.total_completed, expected: cover.total_completed_stored, coverField: "total_completed_stored" },
+        { column: "Balance to Finish", field: "balance_to_finish", sum: jvSums.balance_to_finish, expected: cover.balance_to_finish, coverField: "balance_to_finish" },
+        { column: "Retainage", field: "retainage", sum: jvSums.retainage, expected: cover.total_retainage, coverField: "total_retainage" },
       ];
 
       for (const check of jvChecks) {
@@ -1168,6 +1157,13 @@ app.get("/api/projects/:id/tests/pa-003", async (req, res) => {
         const expVal = Math.round(parseFloat(check.expected) * 100) / 100;
         const diff = Math.round((sumVal - expVal) * 100) / 100;
         const pass = Math.abs(diff) <= TOLERANCE;
+
+        // Build source data: top 5 biggest contributors to the sum
+        const itemsWithVal = lineItems
+          .map(li => ({ id: li.id, contractor: li.contractor_name, item_no: li.item_no, page: li.source_page, value: parseFloat(li[check.field]) || 0 }))
+          .filter(x => x.value !== 0)
+          .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+          .slice(0, 10);
 
         results.push({
           document: "JV Pay App",
@@ -1180,22 +1176,56 @@ app.get("/api/projects/:id/tests/pa-003", async (req, res) => {
           line_count: lineItems.length,
           status: pass ? "Pass" : "Fail",
           remarks: pass
-            ? "Line items sum matches grand total within ±$" + TOLERANCE
-            : "Arithmetic mismatch: line items sum ≠ grand total (Δ $" + Math.abs(diff).toLocaleString() + ")",
+            ? "Line items sum matches cover page grand total within ±$" + TOLERANCE
+            : "Arithmetic mismatch: Σ line items ≠ cover page (Δ $" + Math.abs(diff).toLocaleString() + ")",
           source_data: {
+            field: check.field,
+            cover_field: check.coverField,
+            cover_page: cover.source_page,
+            cover_value: expVal,
             line_items_count: lineItems.length,
-            cover_page_id: cover.id,
-            cover_source_page: cover.source_page,
+            top_items: itemsWithVal,
           },
         });
       }
     }
 
-    // ── Subcontractor Pay Apps: sum sub_line_items columns vs g703 values ──
+    const passCount = results.filter(r => r.status === "Pass").length;
+    const failCount = results.filter(r => r.status === "Fail").length;
+
+    res.json({
+      test_id: "PA-003a",
+      test_name: "JV Pay App — Arithmetic Consistency (Line Items vs Grand Total)",
+      document_group: "Internal Consistency",
+      check_area: "Arithmetic Verification",
+      test_type: "Sum-to-Total",
+      contract_matrix_ref: "G703-JV",
+      tolerance: "±$10",
+      run_date: new Date().toISOString(),
+      summary: { total: results.length, pass: passCount, fail: failCount, na: 0 },
+      results: results.sort((a, b) => {
+        if (a.status === "Fail" && b.status !== "Fail") return -1;
+        if (b.status === "Fail" && a.status !== "Fail") return 1;
+        return Math.abs(b.difference || 0) - Math.abs(a.difference || 0);
+      }),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PA-003b: Arithmetic Consistency — Subcontractor Pay App Continuation Sheets vs Grand Total
+// ══════════════════════════════════════════════════════════════════════════════
+app.get("/api/projects/:id/tests/pa-003b", async (req, res) => {
+  try {
+    const db = await getDb();
+    const projId = req.params.id;
+    const TOLERANCE = 10;
+    const results = [];
+
     const subApps = query(db, "SELECT * FROM subcontractor_applications WHERE project_id=?", [projId]);
     const allSubLines = query(db, "SELECT * FROM sub_line_items WHERE project_id=?", [projId]);
 
-    // Group sub line items by sub_app_id
     const subLinesByApp = {};
     for (const sl of allSubLines) {
       if (!subLinesByApp[sl.sub_app_id]) subLinesByApp[sl.sub_app_id] = [];
@@ -1204,17 +1234,9 @@ app.get("/api/projects/:id/tests/pa-003", async (req, res) => {
 
     for (const sa of subApps) {
       const lines = subLinesByApp[sa.id] || [];
-      if (lines.length === 0) continue; // skip apps with no line items
+      if (lines.length === 0) continue;
 
-      // Sum line item columns
-      const sums = {
-        scheduled_value: 0,
-        work_completed_prev: 0,
-        work_completed_this: 0,
-        materials_stored: 0,
-        total_completed: 0,
-        retainage: 0,
-      };
+      const sums = { scheduled_value: 0, work_completed_prev: 0, work_completed_this: 0, materials_stored: 0, total_completed: 0, retainage: 0 };
       for (const sl of lines) {
         sums.scheduled_value += parseFloat(sl.scheduled_value) || 0;
         sums.work_completed_prev += parseFloat(sl.work_completed_prev) || 0;
@@ -1224,14 +1246,13 @@ app.get("/api/projects/:id/tests/pa-003", async (req, res) => {
         sums.retainage += parseFloat(sl.retainage) || 0;
       }
 
-      // Compare against G703 grand total fields in sub app
       const subChecks = [
-        { column: "Scheduled Value", sum: sums.scheduled_value, expected: sa.g703_scheduled_value },
-        { column: "Work Completed - Previous", sum: sums.work_completed_prev, expected: sa.g703_work_prev },
-        { column: "Work Completed - This Period", sum: sums.work_completed_this, expected: sa.g703_work_this_period },
-        { column: "Materials Stored", sum: sums.materials_stored, expected: sa.g703_materials_stored },
-        { column: "Total Completed & Stored", sum: sums.total_completed, expected: sa.g703_total_completed },
-        { column: "Retainage", sum: sums.retainage, expected: sa.g703_retainage },
+        { column: "Scheduled Value", field: "scheduled_value", sum: sums.scheduled_value, expected: sa.g703_scheduled_value, g703Field: "g703_scheduled_value" },
+        { column: "Work Completed - Previous", field: "work_completed_prev", sum: sums.work_completed_prev, expected: sa.g703_work_prev, g703Field: "g703_work_prev" },
+        { column: "Work Completed - This Period", field: "work_completed_this", sum: sums.work_completed_this, expected: sa.g703_work_this_period, g703Field: "g703_work_this_period" },
+        { column: "Materials Stored", field: "materials_stored", sum: sums.materials_stored, expected: sa.g703_materials_stored, g703Field: "g703_materials_stored" },
+        { column: "Total Completed & Stored", field: "total_completed", sum: sums.total_completed, expected: sa.g703_total_completed, g703Field: "g703_total_completed" },
+        { column: "Retainage", field: "retainage", sum: sums.retainage, expected: sa.g703_retainage, g703Field: "g703_retainage" },
       ];
 
       for (const check of subChecks) {
@@ -1240,6 +1261,13 @@ app.get("/api/projects/:id/tests/pa-003", async (req, res) => {
         const expVal = Math.round(parseFloat(check.expected) * 100) / 100;
         const diff = Math.round((sumVal - expVal) * 100) / 100;
         const pass = Math.abs(diff) <= TOLERANCE;
+
+        // Top 10 line items contributing to this column
+        const topItems = lines
+          .map(sl => ({ id: sl.id, item_no: sl.item_no, description: sl.description, page: sl.source_page, value: parseFloat(sl[check.field]) || 0 }))
+          .filter(x => x.value !== 0)
+          .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+          .slice(0, 10);
 
         results.push({
           document: "Sub Pay App",
@@ -1256,26 +1284,29 @@ app.get("/api/projects/:id/tests/pa-003", async (req, res) => {
             : "Arithmetic mismatch: Σ line items ≠ G703 grand total (Δ $" + Math.abs(diff).toLocaleString() + ")",
           source_data: {
             sub_app_id: sa.id,
+            subcontractor_name: sa.subcontractor_name,
             application_no: sa.application_no,
             start_page: sa.start_page,
             end_page: sa.end_page,
+            g703_field: check.g703Field,
+            g703_value: expVal,
             line_items_count: lines.length,
+            top_items: topItems,
           },
         });
       }
     }
 
-    // Stats
     const passCount = results.filter(r => r.status === "Pass").length;
     const failCount = results.filter(r => r.status === "Fail").length;
 
     res.json({
-      test_id: "PA-003",
-      test_name: "Arithmetic Consistency — Continuation Sheet vs Grand Total",
+      test_id: "PA-003b",
+      test_name: "Subcontractor Pay Apps — Arithmetic Consistency (Line Items vs Grand Total)",
       document_group: "Internal Consistency",
       check_area: "Arithmetic Verification",
       test_type: "Sum-to-Total",
-      contract_matrix_ref: "G703",
+      contract_matrix_ref: "G703-SUB",
       tolerance: "±$10",
       run_date: new Date().toISOString(),
       summary: { total: results.length, pass: passCount, fail: failCount, na: 0 },
