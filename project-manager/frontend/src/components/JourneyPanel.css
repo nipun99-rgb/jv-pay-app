@@ -79,10 +79,18 @@
   background: #f1f5f9;
 }
 
-/* Active phase */
+/* Active phase — filled blue to clearly show selection */
 .jcard-active {
   border-color: #2563eb !important;
-  background: #eff6ff !important;
+  background: #2563eb !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35) !important;
+}
+
+.jcard-active .jcard-name  { color: #ffffff !important; }
+.jcard-active .jcard-meta  { color: #bfdbfe !important; }
+.jcard-active .jcard-circle {
+  background: rgba(255,255,255,0.25) !important;
+  color: #ffffff !important;
 }
 
 /* Completed phase */
@@ -95,10 +103,18 @@
   background: #dcfce7 !important;
 }
 
-/* Active AND done */
+/* Active AND done — still filled blue to show it's selected */
 .jcard-active.jcard-done {
   border-color: #2563eb !important;
-  background: #eff6ff !important;
+  background: #2563eb !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35) !important;
+}
+
+.jcard-active.jcard-done .jcard-name  { color: #ffffff !important; }
+.jcard-active.jcard-done .jcard-meta  { color: #bfdbfe !important; }
+.jcard-active.jcard-done .jcard-circle {
+  background: rgba(255,255,255,0.25) !important;
+  color: #ffffff !important;
 }
 
 /* Running phase */
@@ -187,6 +203,8 @@
 }
 
 .jdot-complete { background: #16a34a; }
+.jcard-active .jdot-complete { background: #ffffff; }
+.jcard-active .jdot-pending  { background: rgba(255,255,255,0.5); }
 .jdot-running  { background: #d97706; animation: jdot-pulse 1.4s ease-in-out infinite; }
 .jdot-error    { background: #dc2626; }
 .jdot-pending  { background: #cbd5e1; }

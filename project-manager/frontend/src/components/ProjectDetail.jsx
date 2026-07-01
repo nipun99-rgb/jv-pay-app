@@ -31,9 +31,12 @@ export default function ProjectDetail({ project, onDelete, onBack, onProjectUpda
   const [gcTab, setGcTab]             = useState("continuation");
   const [validating, setValidating]   = useState(false);
   const [showValidationLogs, setShowValidationLogs] = useState(false);
+  const [validatingSubApps, setValidatingSubApps] = useState(false);
+  const [showSubValidationLogs, setShowSubValidationLogs] = useState(false);
   const [journeyCollapsed, setJourneyCollapsed] = useState(false);
   const [phases, setPhases]           = useState([]);
   const [subApps, setSubApps]         = useState([]);
+  const [subPdfPage, setSubPdfPage]   = useState(1);
 
   useEffect(() => { setLocalProject(project); }, [project]);
 
@@ -193,6 +196,37 @@ export default function ProjectDetail({ project, onDelete, onBack, onProjectUpda
     if (phaseNum === 2) await loadSubApps();
   };
 
+  const handleSubAIValidate = async () => {
+    setValidatingSubApps(true);
+    setShowSubValidationLogs(true);
+    try {
+      await fetch(`${API}/projects/${localProject.id}/validate-ai/subcontractors`, { method: "POST" });
+      const poll = setInterval(async () => {
+        const r = await fetch(`${API}/projects/${localProject.id}/sub-validation-summary`);
+        const s = await r.json();
+        if (s.checking === 0) {
+          clearInterval(poll);
+          setTimeout(async () => {
+            setValidatingSubApps(false);
+            await loadSubApps();
+          }, 2000);
+        }
+      }, 2000);
+    } catch (err) {
+      console.error("Sub AI validation failed:", err);
+      setValidatingSubApps(false);
+    }
+  };
+
+  const handleUpdateSubValidation = async (appId, status, note) => {
+    await fetch(`${API}/projects/${localProject.id}/subcontractor-applications/${appId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ validation_status: status, validation_note: note }),
+    });
+    await loadSubApps();
+  };
+
   const handleRunPipeline = async () => {
     setPipelineRunning(true);
     try {
@@ -304,10 +338,31 @@ export default function ProjectDetail({ project, onDelete, onBack, onProjectUpda
             </button>
           )}
 
+          {view === "validate" && activePhase === 2 && subApps.length > 0 && (
+            <button
+              className={`ws-btn ws-btn-ai${validatingSubApps ? " ws-btn-ai-running" : ""}`}
+              onClick={handleSubAIValidate}
+              disabled={validatingSubApps}
+              title="AI checks each subcontractor pay app against the sub PDF"
+            >
+              {validatingSubApps ? "🤖 Validating…" : "🤖 AI Validate"}
+            </button>
+          )}
+
           {view === "validate" && showValidationLogs && !validating && activePhase === 1 && (
             <button
               className="ws-btn ws-btn-ghost"
               onClick={() => setShowValidationLogs(false)}
+              title="Switch back to PDF view"
+            >
+              📄 Show PDF
+            </button>
+          )}
+
+          {view === "validate" && activePhase === 2 && showSubValidationLogs && !validatingSubApps && (
+            <button
+              className="ws-btn ws-btn-ghost"
+              onClick={() => setShowSubValidationLogs(false)}
               title="Switch back to PDF view"
             >
               📄 Show PDF
@@ -598,7 +653,11 @@ export default function ProjectDetail({ project, onDelete, onBack, onProjectUpda
 
               {/* Left panel: subcontractor table */}
               <div className="ws-validate-data">
-                <SubcontractorTable apps={subApps} />
+                <SubcontractorTable
+                  apps={subApps}
+                  onPageClick={(page) => setSubPdfPage(page)}
+                  onUpdateValidation={handleUpdateSubValidation}
+                />
               </div>
 
               {/* Right panel: subcontractor PDF */}
@@ -606,15 +665,18 @@ export default function ProjectDetail({ project, onDelete, onBack, onProjectUpda
                 <div className="ws-pdf-bar">
                   <span className="ws-pdf-title">📄 Subcontractor PDF</span>
                   {hasSubPdf && (
-                    <span className="ws-page-display">
-                      {phase2.pdf_path.split(/[/\\]/).pop()}
-                    </span>
+                    <div className="ws-pdf-nav">
+                      <span className="ws-page-display">Page {subPdfPage}</span>
+                    </div>
                   )}
                 </div>
-                {hasSubPdf ? (
+                {(showSubValidationLogs) ? (
+                  <OutputPanel projectId={localProject.id} visible={true} />
+                ) : hasSubPdf ? (
                   <iframe
                     className="ws-pdf-frame"
-                    src={`/api/projects/${localProject.id}/sub-pdf`}
+                    src={`/api/projects/${localProject.id}/pdf/pages?from=${subPdfPage}&to=${subPdfPage}&src=sub`}
+                    key={`sub-page-${subPdfPage}`}
                     title="Subcontractor PDF"
                   />
                 ) : (
