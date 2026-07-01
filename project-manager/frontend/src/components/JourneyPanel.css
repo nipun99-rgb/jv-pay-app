@@ -1,0 +1,360 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   Journey Strip — inline collapsible stepper above data content
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.jstrip {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* ── Header row ───────────────────────────────────────────────────────── */
+.jstrip-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 20px;
+  min-height: 56px;
+}
+
+.jstrip-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #94a3b8;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Phase cards row ──────────────────────────────────────────────────── */
+.jstrip-cards {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: 0;
+}
+
+.jstrip-card-group {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: 0;
+}
+
+/* Connector line between cards */
+.jstrip-connector {
+  flex-shrink: 0;
+  width: 24px;
+  height: 2px;
+  background: #e2e8f0;
+}
+
+.jstrip-connector.jconn-done {
+  background: #86efac;
+}
+
+/* Phase card button */
+.jstrip-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+
+.jstrip-card:hover:not(.jcard-locked) {
+  border-color: #94a3b8;
+  background: #f1f5f9;
+}
+
+/* Active phase */
+.jcard-active {
+  border-color: #2563eb !important;
+  background: #eff6ff !important;
+}
+
+/* Completed phase */
+.jcard-done {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.jcard-done:hover {
+  background: #dcfce7 !important;
+}
+
+/* Active AND done */
+.jcard-active.jcard-done {
+  border-color: #2563eb !important;
+  background: #eff6ff !important;
+}
+
+/* Running phase */
+.jcard-running {
+  border-color: #d97706 !important;
+  background: #fffbeb !important;
+}
+
+/* Locked phase */
+.jcard-locked {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ── Circle ───────────────────────────────────────────────────────────── */
+.jcard-circle {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  background: #e2e8f0;
+  color: #64748b;
+}
+
+.jcard-done .jcard-circle {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.jcard-active:not(.jcard-done) .jcard-circle {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.jcard-running .jcard-circle {
+  background: #fef3c7;
+  color: #d97706;
+  animation: jcard-spin 1.2s linear infinite;
+}
+
+@keyframes jcard-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Text block ───────────────────────────────────────────────────────── */
+.jcard-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.jcard-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.jcard-meta {
+  font-size: 11px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+/* ── Status dot (top-right corner) ───────────────────────────────────── */
+.jcard-dot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.jdot-complete { background: #16a34a; }
+.jdot-running  { background: #d97706; animation: jdot-pulse 1.4s ease-in-out infinite; }
+.jdot-error    { background: #dc2626; }
+.jdot-pending  { background: #cbd5e1; }
+
+@keyframes jdot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.3); }
+}
+
+/* ── Collapse toggle ──────────────────────────────────────────────────── */
+.jstrip-collapse-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.jstrip-collapse-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+/* Collapsed state — no extra space */
+.jstrip-collapsed .jstrip-header {
+  padding-bottom: 10px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Phase 2 Setup Area
+   ══════════════════════════════════════════════════════════════════════════ */
+.jstrip-setup {
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 14px 20px;
+}
+
+.jstrip-setup-steps {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.jsetup-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 240px;
+  padding: 12px 14px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.step-done    { border-color: #86efac; background: #f0fdf4; }
+.step-active  { border-color: #93c5fd; }
+.step-locked  { opacity: 0.5; pointer-events: none; }
+.step-running { border-color: #fcd34d; background: #fffbeb; }
+.step-error   { border-color: #fca5a5; background: #fef2f2; }
+
+/* Setup step circle */
+.jsetup-circle {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.step-done    .jsetup-circle { background: #dcfce7; color: #16a34a; }
+.step-running .jsetup-circle { background: #fef3c7; color: #d97706; }
+
+.jsetup-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.jsetup-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.jsetup-note {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────── */
+.jsetup-btn {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.jbtn-primary {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+.jbtn-primary:hover:not(:disabled) { background: #1d4ed8; border-color: #1d4ed8; }
+
+.jbtn-accent {
+  background: #7c3aed;
+  color: #ffffff;
+  border-color: #7c3aed;
+}
+.jbtn-accent:hover:not(:disabled) { background: #6d28d9; border-color: #6d28d9; }
+
+.jbtn-ghost {
+  background: transparent;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+.jbtn-ghost:hover:not(:disabled) { background: #f1f5f9; border-color: #94a3b8; }
+
+.jbtn-running {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+  cursor: wait;
+}
+
+.jsetup-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Log tail ─────────────────────────────────────────────────────── */
+.jstrip-log {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: #0f172a;
+  border-radius: 6px;
+  max-height: 68px;
+  overflow: hidden;
+}
+
+.jlog-line {
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+  font-size: 10px;
+  line-height: 1.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jlog-info    { color: #94a3b8; }
+.jlog-success { color: #4ade80; }
+.jlog-error   { color: #f87171; }
+.jlog-warning { color: #fbbf24; }
