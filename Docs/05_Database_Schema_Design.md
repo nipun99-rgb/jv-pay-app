@@ -449,7 +449,7 @@ CREATE TABLE IF NOT EXISTS raw_extracted_fields (
 
 ---
 
-### FAMILY 6 — TRANSACTION: GC DATA (File 1)
+### FAMILY 6 — TRANSACTION: CONTRACTOR DATA (File 1)
 
 #### Table 16: `gc_pay_application_headers`
 > G702 Cover Page. Renamed from `cover_page`. One row per package.
