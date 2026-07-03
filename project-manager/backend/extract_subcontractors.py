@@ -267,10 +267,10 @@ if current_group:
 
 progress(f"Found {len(payapp_groups)} pay application packets")
 
-# ── Step 3: Extract header + G703 grand totals ────────────────────────────────
+# ── Step 3: Extract header + G703 data ───────────────────────────────────────
 EXTRACT_SYSTEM = """You are an expert construction contract data extractor.
 Extract from ONE subcontractor pay application packet.
-Return a single JSON object with keys "header" and "g703_grand_totals".
+Return a single JSON object with keys "header", "g703_grand_totals", and "sov_lines".
 
 "header": {
   "subcontractor_name": string,
@@ -308,6 +308,24 @@ Return a single JSON object with keys "header" and "g703_grand_totals".
   "g703_total_earned_less_retainage": number or null,
   "g703_balance_to_finish": number or null
 }
+
+"sov_lines": array of individual G703 Schedule of Values line items (from continuation sheet).
+Each element:
+{
+  "item_no": string or null,
+  "description_of_work": string,
+  "scheduled_value": number or null,
+  "work_completed_previous": number or null,
+  "work_completed_this_period": number or null,
+  "materials_stored": number or null,
+  "total_completed_and_stored": number or null,
+  "percent_complete": number or null,
+  "retainage": number or null,
+  "balance_to_finish": number or null,
+  "page_number": integer or null
+}
+Include ALL non-grand-total rows from the G703 table. Exclude header rows and the GRAND TOTAL row.
+If no G703 continuation sheet is present, return "sov_lines": [].
 
 All monetary values: plain numbers, no $ or commas.
 Return ONLY the JSON object. No markdown."""
@@ -442,6 +460,7 @@ for seq_id, app in enumerate(sorted(extracted_data, key=lambda x: x.get("_start_
         "architect_signature":         h.get("architect_sign_present", ""),
         "notarized":                   h.get("notary_details_present", ""),
         "additional_supporting_docs":  h.get("additional_supporting_documents", ""),
+        "sov_lines":                   app.get("sov_lines") or [],
     })
 
 with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
