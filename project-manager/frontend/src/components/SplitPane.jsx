@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import "./SplitPane.css";
 
 /**
  * Resizable split pane with drag handle and collapse/expand on hover.
