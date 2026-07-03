@@ -1,8 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { SummaryBar, ValidationBadge } from "./shared";
-import "./SubcontractorTable.css";
 
-const API = "http://localhost:3001/api";
+const API = "/api";
 
 const fmtMoney = (v) => {
   if (v === null || v === undefined || v === "") return "—";
