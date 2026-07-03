@@ -1,0 +1,3363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Agent Architecture Feasibility Assessment</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --surface2: #334155;
+            --border: #475569;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent2: #8b5cf6;
+            --green: #10b981;
+            --yellow: #f59e0b;
+            --red: #ef4444;
+            --orange: #f97316;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle { color: var(--text-muted); margin-bottom: 2rem; font-size: 0.95rem; }
+        h2 {
+            font-size: 1.3rem;
+            margin: 2rem 0 1rem;
+            color: var(--accent);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+        h3 { font-size: 1.1rem; margin: 1.5rem 0 0.75rem; color: var(--text); }
+
+        /* Cards */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        .card-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .card-body { color: var(--text-muted); font-size: 0.9rem; }
+
+        /* Agent Flow Diagram */
+        .flow-container {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            min-width: 900px;
+        }
+        .agent-node {
+            background: linear-gradient(135deg, var(--surface2), var(--surface));
+            border: 2px solid var(--accent);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            text-align: center;
+            min-width: 140px;
+            position: relative;
+        }
+        .agent-node.verification { border-color: var(--green); }
+        .agent-node.retry { border-color: var(--yellow); }
+        .agent-node.classification { border-color: var(--accent2); }
+        .agent-node.human { border-color: var(--orange); }
+        .agent-node .label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem; }
+        .agent-node .name { font-weight: 600; font-size: 0.9rem; }
+        .arrow {
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            padding: 0 0.25rem;
+        }
+        .arrow-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-align: center;
+            display: block;
+        }
+
+        /* Detailed Flow */
+        .flow-detailed {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        .flow-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: var(--surface);
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            border-left: 4px solid var(--accent);
+        }
+        .flow-row.green { border-left-color: var(--green); }
+        .flow-row.yellow { border-left-color: var(--yellow); }
+        .flow-row.red { border-left-color: var(--red); }
+        .flow-row.purple { border-left-color: var(--accent2); }
+        .flow-step { font-weight: 600; min-width: 160px; }
+        .flow-desc { color: var(--text-muted); font-size: 0.9rem; flex: 1; }
+        .flow-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .badge-green { background: rgba(16,185,129,0.15); color: var(--green); }
+        .badge-yellow { background: rgba(245,158,11,0.15); color: var(--yellow); }
+        .badge-red { background: rgba(239,68,68,0.15); color: var(--red); }
+        .badge-blue { background: rgba(59,130,246,0.15); color: var(--accent); }
+
+        /* Tables */
+        .table-wrap {
+            overflow-x: auto;
+            margin: 1rem 0;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        th {
+            background: var(--surface2);
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        td {
+            padding: 0.75rem 1rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+        tr:hover td { background: rgba(59,130,246,0.05); }
+
+        /* Cost comparison */
+        .cost-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .cost-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        .cost-card h4 { margin-bottom: 1rem; }
+        .cost-bar-container { margin: 0.5rem 0; }
+        .cost-bar-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+        .cost-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: var(--surface2);
+            overflow: hidden;
+        }
+        .cost-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s ease;
+        }
+        .fill-blue { background: var(--accent); }
+        .fill-green { background: var(--green); }
+        .fill-yellow { background: var(--yellow); }
+        .fill-red { background: var(--red); }
+
+        /* Risk matrix */
+        .risk-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            background: var(--surface);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .risk-level {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            min-width: 60px;
+            text-align: center;
+            text-transform: uppercase;
+        }
+        .risk-high { background: rgba(239,68,68,0.15); color: var(--red); }
+        .risk-med { background: rgba(245,158,11,0.15); color: var(--yellow); }
+        .risk-low { background: rgba(16,185,129,0.15); color: var(--green); }
+        .risk-content { flex: 1; }
+        .risk-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem; }
+        .risk-desc { font-size: 0.85rem; color: var(--text-muted); }
+
+        /* Decision section */
+        .decision-box {
+            background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1));
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+        .decision-box h3 {
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .decision-box p { color: var(--text-muted); max-width: 700px; margin: 0 auto; }
+
+        /* Approach comparison */
+        .approach-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        @media (max-width: 900px) { .approach-grid { grid-template-columns: 1fr; } }
+        .approach-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: relative;
+        }
+        .approach-card.recommended {
+            border-color: var(--green);
+            box-shadow: 0 0 20px rgba(16,185,129,0.1);
+        }
+        .approach-card.recommended::before {
+            content: '✓ RECOMMENDED';
+            position: absolute;
+            top: -10px;
+            right: 12px;
+            background: var(--green);
+            color: #000;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+        }
+        .approach-card h4 { margin-bottom: 0.75rem; }
+        .approach-card ul { list-style: none; padding: 0; }
+        .approach-card li {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            padding: 0.3rem 0;
+            padding-left: 1.2rem;
+            position: relative;
+        }
+        .approach-card li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+            margin: 1.5rem 0;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border);
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.55rem;
+            top: 0.5rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent);
+            border: 2px solid var(--bg);
+        }
+        .timeline-item.phase2::before { background: var(--accent2); }
+        .timeline-item.phase3::before { background: var(--green); }
+        .timeline-phase { font-size: 0.75rem; color: var(--accent); font-weight: 600; text-transform: uppercase; }
+        .timeline-title { font-weight: 600; margin: 0.25rem 0; }
+        .timeline-desc { font-size: 0.85rem; color: var(--text-muted); }
+
+        /* Verdict meter */
+        .verdict-meter {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: var(--surface);
+            border-radius: 10px;
+        }
+        .meter-bar {
+            flex: 1;
+            height: 12px;
+            background: var(--surface2);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+        .meter-fill {
+            height: 100%;
+            border-radius: 6px;
+            background: linear-gradient(90deg, var(--green), var(--accent));
+            transition: width 1.5s ease;
+        }
+        .meter-label { font-size: 0.85rem; min-width: 140px; }
+        .meter-value { font-weight: 600; min-width: 50px; text-align: right; }
+
+        /* LangGraph Diagram */
+        .langgraph-diagram {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .lg-node {
+            width: 100%;
+            max-width: 600px;
+            border-radius: 10px;
+            border: 2px solid var(--border);
+            background: var(--bg);
+            padding: 1rem 1.5rem;
+            position: relative;
+            margin: 0.25rem 0;
+        }
+        .lg-node.lg-small { max-width: 260px; }
+        .lg-node-label {
+            position: absolute;
+            top: -9px;
+            left: 12px;
+            background: var(--bg);
+            padding: 0 0.4rem;
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        .lg-node-inner { text-align: center; }
+        .lg-node-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.3rem; font-family: 'Consolas', monospace; }
+        .lg-node-desc { font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; }
+        .lg-node-tools { font-size: 0.7rem; color: var(--accent); margin-top: 0.4rem; font-family: 'Consolas', monospace; }
+        .lg-node-model { font-size: 0.7rem; color: var(--accent2); margin-top: 0.2rem; }
+        .lg-node-tag {
+            display: inline-block;
+            font-size: 0.6rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            margin-top: 0.4rem;
+            text-transform: uppercase;
+        }
+
+        .lg-node.lg-start, .lg-node.lg-end {
+            max-width: 100px;
+            text-align: center;
+            border-radius: 50px;
+            padding: 0.5rem 1rem;
+            border-color: var(--text-muted);
+        }
+        .lg-node.lg-start .lg-node-inner, .lg-node.lg-end .lg-node-inner { font-weight: 700; font-size: 0.85rem; }
+        .lg-node.lg-agent { border-color: var(--accent); background: rgba(59,130,246,0.05); }
+        .lg-node.lg-agent .lg-node-label { color: var(--accent); }
+        .lg-node.lg-tool { border-color: var(--text-muted); }
+        .lg-node.lg-interrupt { border-color: var(--orange); background: rgba(249,115,22,0.05); }
+        .lg-node.lg-interrupt .lg-node-label { color: var(--orange); }
+        .lg-node.lg-conditional { border-color: var(--yellow); border-style: dashed; background: rgba(245,158,11,0.05); }
+        .lg-node.lg-conditional .lg-node-label { color: var(--yellow); }
+
+        .lg-edge {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0.15rem 0;
+        }
+        .lg-edge-line {
+            width: 2px;
+            height: 24px;
+            background: var(--border);
+        }
+        .lg-edge-label {
+            font-size: 0.7rem;
+            color: var(--yellow);
+            font-style: italic;
+        }
+        .lg-edge.lg-edge-conditional .lg-edge-line { background: var(--yellow); }
+
+        .lg-fanout {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            margin: 1rem 0;
+            padding: 1rem;
+            border: 1px dashed var(--border);
+            border-radius: 10px;
+            position: relative;
+        }
+        .lg-fanout::before {
+            content: 'FAN-OUT (parallel)';
+            position: absolute;
+            top: -9px;
+            left: 12px;
+            background: var(--surface);
+            padding: 0 0.4rem;
+            font-size: 0.6rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        .lg-fanout-branch {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            min-width: 200px;
+        }
+        .lg-edge.lg-edge-branch { flex-direction: row; gap: 0.5rem; }
+        .lg-edge-line-h { width: 40px; height: 2px; background: var(--border); }
+
+        .lg-retry-loop {
+            border: 2px dashed var(--yellow);
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            max-width: 600px;
+            width: 100%;
+            position: relative;
+            background: rgba(245,158,11,0.03);
+        }
+        .lg-retry-label {
+            position: absolute;
+            top: -9px;
+            left: 12px;
+            background: var(--surface);
+            padding: 0 0.4rem;
+            font-size: 0.6rem;
+            font-weight: 700;
+            color: var(--yellow);
+            text-transform: uppercase;
+        }
+        .lg-retry-arrow {
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--yellow);
+            margin-top: 0.5rem;
+            font-weight: 600;
+        }
+
+        /* Code block */
+        .code-block {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin: 1.5rem 0;
+            overflow: hidden;
+        }
+        .code-header {
+            background: var(--surface2);
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+        .code-block pre {
+            padding: 1.25rem;
+            overflow-x: auto;
+            font-size: 0.8rem;
+            line-height: 1.6;
+        }
+        .code-block code {
+            font-family: 'Consolas', 'Fira Code', monospace;
+            color: var(--text-muted);
+        }
+
+        /* ========== MOCK UI STYLES ========== */
+        .mock-ui-container {
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            margin: 1.5rem 0;
+        }
+        .mock-nav {
+            display: flex;
+            gap: 0;
+            background: var(--surface2);
+            padding: 0;
+            overflow-x: auto;
+            border-bottom: 2px solid var(--border);
+        }
+        .mock-tab {
+            padding: 0.75rem 1.25rem;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        .mock-tab:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+        .mock-tab.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--surface); }
+
+        .mock-screen { display: grid; grid-template-columns: 1fr 320px; min-height: 600px; }
+        .mock-screen.hidden { display: none; }
+        @media (max-width: 1000px) { .mock-screen { grid-template-columns: 1fr; } }
+
+        .mock-header {
+            grid-column: 1 / -1;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+        }
+        .mock-breadcrumb { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+        .mock-title { font-size: 1.1rem; margin: 0; }
+        .mock-subtitle { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; }
+
+        .mock-body { padding: 1.5rem; overflow-y: auto; }
+        .mock-actions { margin-top: 1.5rem; display: flex; gap: 0.75rem; justify-content: flex-end; }
+        .btn-primary {
+            padding: 0.6rem 1.5rem;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-secondary {
+            padding: 0.6rem 1.5rem;
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        /* Agent Panel */
+        .agent-panel {
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            padding: 1rem;
+            overflow-y: auto;
+            max-height: 600px;
+        }
+        .agent-panel-header {
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .agent-log { display: flex; flex-direction: column; gap: 0.5rem; }
+        .agent-log-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            padding: 0.4rem 0.5rem;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.02);
+        }
+        .agent-log-item.agent-log-escalation { background: rgba(139,92,246,0.08); }
+        .agent-log-item.agent-log-interrupt { background: rgba(249,115,22,0.08); }
+        .agent-log-item.agent-log-running { background: rgba(59,130,246,0.08); }
+        .agent-badge {
+            font-size: 0.6rem;
+            font-weight: 700;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            white-space: nowrap;
+        }
+        .badge-ingest { background: rgba(16,185,129,0.15); color: var(--green); }
+        .badge-classify { background: rgba(139,92,246,0.15); color: var(--accent2); }
+        .badge-extract { background: rgba(59,130,246,0.15); color: var(--accent); }
+        .badge-verify { background: rgba(16,185,129,0.15); color: var(--green); }
+        .badge-retry { background: rgba(245,158,11,0.15); color: var(--yellow); }
+        .badge-recon { background: rgba(99,102,241,0.15); color: #818cf8; }
+        .badge-human { background: rgba(249,115,22,0.15); color: var(--orange); }
+        .agent-time { margin-left: auto; color: var(--text-muted); font-size: 0.65rem; }
+        .agent-cost-tracker {
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            background: var(--surface2);
+            border-radius: 8px;
+        }
+        .cost-item { display: flex; justify-content: space-between; font-size: 0.75rem; padding: 0.2rem 0; color: var(--text-muted); }
+        .cost-value { font-weight: 600; color: var(--text); }
+
+        /* Upload Screen */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 3rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .upload-zone:hover { border-color: var(--accent); }
+        .upload-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+        .upload-text { font-weight: 600; font-size: 1rem; }
+        .upload-subtext { color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem; }
+        .upload-formats { color: var(--text-muted); font-size: 0.75rem; margin-top: 0.5rem; }
+        .uploaded-files { margin-top: 1.5rem; }
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: var(--surface);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            border: 1px solid var(--border);
+        }
+        .file-icon { font-size: 1.3rem; }
+        .file-info { flex: 1; }
+        .file-name { font-weight: 600; font-size: 0.85rem; }
+        .file-size { font-size: 0.75rem; color: var(--text-muted); }
+        .file-status { font-size: 0.75rem; font-weight: 600; }
+        .status-success { color: var(--green); }
+
+        /* Classification Screen */
+        .classify-results { display: flex; flex-direction: column; gap: 1rem; }
+        .classify-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+        }
+        .classify-card.classify-needs-review { border-color: var(--yellow); background: rgba(245,158,11,0.03); }
+        .classify-file { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .classify-result { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.4rem; }
+        .classify-type {
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.3rem 0.75rem;
+            border-radius: 6px;
+        }
+        .type-file1 { background: rgba(59,130,246,0.15); color: var(--accent); }
+        .type-file2 { background: rgba(139,92,246,0.15); color: var(--accent2); }
+        .type-file3 { background: rgba(16,185,129,0.15); color: var(--green); }
+        .confidence-pill {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+        }
+        .conf-high { background: rgba(16,185,129,0.15); color: var(--green); }
+        .conf-med { background: rgba(245,158,11,0.15); color: var(--yellow); }
+        .classify-method { font-size: 0.75rem; color: var(--text-muted); }
+        .classify-auto { font-size: 0.75rem; color: var(--green); margin-top: 0.3rem; }
+        .classify-action { margin-top: 0.5rem; display: flex; align-items: center; gap: 0.75rem; }
+        .needs-confirm { font-size: 0.75rem; color: var(--yellow); font-weight: 600; }
+        .classify-select {
+            padding: 0.4rem 0.75rem;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.8rem;
+        }
+
+        /* Extraction Screen */
+        .extract-progress-grid { display: flex; flex-direction: column; gap: 1rem; }
+        .extract-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+        }
+        .extract-card.extract-done { border-left: 4px solid var(--green); }
+        .extract-card.extract-running { border-left: 4px solid var(--accent); }
+        .extract-card.extract-waiting { border-left: 4px solid var(--text-muted); opacity: 0.7; }
+        .extract-card-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+        .extract-card-icon { font-size: 1.2rem; }
+        .extract-card-title { font-weight: 600; font-size: 0.9rem; flex: 1; }
+        .extract-card-status { font-size: 0.75rem; font-weight: 600; }
+        .status-done { color: var(--green); }
+        .status-running { color: var(--accent); }
+        .status-waiting { color: var(--text-muted); }
+        .extract-card-body { padding-left: 2rem; }
+        .extract-stat { font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0; }
+        .extract-method { font-size: 0.7rem; color: var(--text-muted); font-style: italic; margin-top: 0.3rem; }
+        .extract-progress-bar { height: 6px; background: var(--surface2); border-radius: 3px; margin: 0.5rem 0; overflow: hidden; }
+        .extract-progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.5s; }
+        .extract-sub-list { padding-left: 2rem; margin-top: 0.5rem; }
+        .sub-item { font-size: 0.75rem; padding: 0.2rem 0; }
+        .sub-done { color: var(--green); }
+        .sub-running { color: var(--accent); }
+        .sub-waiting { color: var(--text-muted); }
+
+        /* Verification Screen */
+        .verify-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        @media (max-width: 800px) { .verify-summary { grid-template-columns: repeat(2, 1fr); } }
+        .verify-stat-card {
+            text-align: center;
+            padding: 1.25rem;
+            border-radius: 10px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+        }
+        .verify-stat-card.verify-auto { border-top: 3px solid var(--green); }
+        .verify-stat-card.verify-spot { border-top: 3px solid var(--yellow); }
+        .verify-stat-card.verify-retry-stat { border-top: 3px solid var(--orange); }
+        .verify-stat-card.verify-escalated { border-top: 3px solid var(--red); }
+        .verify-stat-num { font-size: 1.8rem; font-weight: 700; }
+        .verify-stat-label { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; }
+        .verify-stat-pct { font-size: 0.7rem; color: var(--text-muted); }
+        .verify-table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+        .verify-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        .verify-table th { background: var(--surface2); padding: 0.6rem 0.75rem; text-align: left; font-weight: 600; }
+        .verify-table td { padding: 0.6rem 0.75rem; border-top: 1px solid var(--border); }
+        .td-green { color: var(--green); font-weight: 600; }
+        .td-yellow { color: var(--yellow); font-weight: 600; }
+        .td-orange { color: var(--orange); font-weight: 600; }
+        .td-red { color: var(--red); font-weight: 600; }
+        .conf-bar { display: inline-block; width: 60px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; vertical-align: middle; margin-right: 0.5rem; }
+        .conf-bar .conf-fill { height: 100%; background: var(--green); border-radius: 3px; }
+        .conf-bar.conf-low .conf-fill { background: var(--red); }
+        .verify-row-problem { background: rgba(239,68,68,0.05); }
+
+        /* Retry results */
+        .retry-results { margin-top: 1rem; }
+        .retry-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem; }
+        .retry-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        .retry-sub { font-weight: 600; font-size: 0.85rem; }
+        .retry-outcome { font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 4px; }
+        .retry-improved { background: rgba(16,185,129,0.15); color: var(--green); }
+        .retry-escalated { background: rgba(239,68,68,0.15); color: var(--red); }
+        .retry-detail { padding-left: 1rem; }
+        .retry-attempt { font-size: 0.8rem; color: var(--text-muted); padding: 0.2rem 0; display: flex; gap: 0.5rem; }
+        .retry-label { min-width: 180px; }
+        .retry-score { font-weight: 600; color: var(--red); }
+        .retry-score-better { color: var(--green); }
+        .retry-escalate { font-size: 0.75rem; color: var(--orange); margin-top: 0.3rem; font-style: italic; }
+
+        /* Reconciliation Screen */
+        .recon-summary { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; justify-content: center; }
+        .recon-stat { text-align: center; padding: 1.25rem 2rem; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); }
+        .recon-stat.passed { border-top: 3px solid var(--green); }
+        .recon-stat.warnings { border-top: 3px solid var(--yellow); }
+        .recon-stat.exceptions { border-top: 3px solid var(--red); }
+        .recon-num { font-size: 2rem; font-weight: 700; }
+        .recon-label { font-size: 0.8rem; color: var(--text-muted); }
+
+        .exception-list { display: flex; flex-direction: column; gap: 0.75rem; }
+        .exception-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; }
+        .exception-item.exception-high { border-left: 4px solid var(--red); }
+        .exception-item.exception-med { border-left: 4px solid var(--yellow); }
+        .exception-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        .exception-type { font-family: 'Consolas', monospace; font-size: 0.8rem; font-weight: 600; color: var(--text); }
+        .exception-severity { font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 4px; text-transform: uppercase; }
+        .sev-high { background: rgba(239,68,68,0.15); color: var(--red); }
+        .sev-med { background: rgba(245,158,11,0.15); color: var(--yellow); }
+        .exception-body { font-size: 0.85rem; color: var(--text-muted); }
+        .exception-delta { font-weight: 600; color: var(--text); margin-top: 0.25rem; }
+        .exception-evidence { margin-top: 0.5rem; display: flex; gap: 0.75rem; }
+        .evidence-link { font-size: 0.7rem; color: var(--accent); cursor: pointer; }
+
+        /* Review Screen */
+        .review-tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+        .review-tab { padding: 0.5rem 1rem; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; }
+        .review-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .review-item {
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            gap: 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        @media (max-width: 800px) { .review-item { grid-template-columns: 1fr; } }
+        .review-field-name { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .review-context { display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.8rem; margin-bottom: 0.75rem; }
+        .review-extracted { color: var(--text-muted); }
+        .review-expected { color: var(--yellow); }
+        .review-confidence { color: var(--text-muted); }
+        .source-placeholder {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .source-placeholder.source-blurry { opacity: 0.7; border-color: var(--yellow); }
+        .source-highlight { font-size: 1.1rem; font-weight: 700; color: var(--green); margin-bottom: 0.5rem; padding: 0.3rem 0.75rem; border: 2px solid var(--green); border-radius: 4px; display: inline-block; }
+        .source-text { font-size: 0.7rem; color: var(--text-muted); }
+        .review-actions-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        .review-btn {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface2);
+            color: var(--text);
+            font-size: 0.75rem;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+        }
+        .review-btn:hover { border-color: var(--accent); }
+        .review-btn.review-accept { border-color: var(--green); color: var(--green); }
+        .review-btn.review-override { border-color: var(--yellow); color: var(--yellow); }
+        .review-btn.review-flag { border-color: var(--orange); color: var(--orange); }
+        .review-reason { margin-top: 0.5rem; }
+        .review-reason textarea {
+            width: 100%;
+            padding: 0.5rem;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.75rem;
+            resize: vertical;
+            min-height: 50px;
+        }
+        .review-progress { margin-top: 1rem; }
+        .review-progress-text { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem; }
+        .review-progress-bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+        .review-progress-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+
+        .agent-savings {
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(16,185,129,0.05);
+            border: 1px solid rgba(16,185,129,0.2);
+            border-radius: 8px;
+        }
+        .savings-title { font-size: 0.75rem; font-weight: 700; color: var(--green); margin-bottom: 0.5rem; }
+        .savings-old { font-size: 0.75rem; color: var(--text-muted); text-decoration: line-through; }
+        .savings-new { font-size: 0.75rem; color: var(--green); font-weight: 600; margin-top: 0.25rem; }
+
+        /* Complete Screen */
+        .complete-summary { text-align: center; padding: 2rem; }
+        .complete-icon { font-size: 3rem; margin-bottom: 0.75rem; }
+        .complete-text { font-size: 1.1rem; font-weight: 600; }
+        .complete-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 1.5rem 0; }
+        @media (max-width: 800px) { .complete-stats { grid-template-columns: repeat(2, 1fr); } }
+        .complete-stat-card {
+            text-align: center;
+            padding: 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        .complete-stat-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.3rem; }
+        .complete-stat-value { font-size: 1.3rem; font-weight: 700; }
+        .complete-stat-note { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem; }
+
+        .complete-output { margin: 1.5rem 0; }
+        .complete-output h4 { margin-bottom: 0.75rem; }
+        .output-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+        @media (max-width: 700px) { .output-grid { grid-template-columns: 1fr; } }
+        .output-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .output-icon { font-size: 1.3rem; }
+        .output-title { font-weight: 600; font-size: 0.85rem; }
+        .output-desc { font-size: 0.75rem; color: var(--text-muted); }
+
+        .complete-audit { margin-top: 1.5rem; }
+        .complete-audit h4 { margin-bottom: 0.75rem; }
+        .audit-entries {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+        }
+        .audit-entry { font-size: 0.7rem; padding: 0.3rem 0.5rem; display: flex; gap: 1rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .audit-time { color: var(--text-muted); min-width: 65px; }
+
+        /* Architecture Diagram */
+        .arch-diagram { margin: 1.5rem 0; }
+        .arch-layer {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 0.5rem 0;
+            position: relative;
+        }
+        .arch-layer-label {
+            position: absolute;
+            top: -10px;
+            left: 16px;
+            background: var(--bg);
+            padding: 0 0.5rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+        .arch-row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .arch-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            min-width: 180px;
+            max-width: 280px;
+            flex: 1;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .arch-box:hover { transform: translateY(-2px); }
+        .arch-box-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        .arch-box-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.4rem; }
+        .arch-box-desc { font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; }
+        .arch-box-meta { margin-top: 0.5rem; display: flex; gap: 0.4rem; justify-content: center; flex-wrap: wrap; }
+        .meta-tag {
+            font-size: 0.6rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .tag-llm { background: rgba(59,130,246,0.15); color: var(--accent); }
+        .tag-deterministic { background: rgba(16,185,129,0.15); color: var(--green); }
+        .tag-new { background: rgba(139,92,246,0.15); color: var(--accent2); }
+        .tag-enhanced { background: rgba(245,158,11,0.15); color: var(--yellow); }
+        .tag-keep { background: rgba(16,185,129,0.15); color: var(--green); }
+        .tag-human { background: rgba(249,115,22,0.15); color: var(--orange); }
+        .tag-custom { background: rgba(139,92,246,0.15); color: var(--accent2); }
+
+        .box-orchestrator { border-color: var(--accent2); }
+        .agent-classify { border-color: var(--accent2); }
+        .agent-extract { border-color: var(--accent); }
+        .agent-verify { border-color: var(--green); }
+        .agent-retry { border-color: var(--yellow); }
+        .agent-reconcile { border-color: var(--text-muted); }
+        .agent-human { border-color: var(--orange); }
+        .box-infra { border-color: var(--orange); min-width: 140px; max-width: 200px; }
+        .box-data { border-color: var(--red); }
+
+        .arch-connector {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0.25rem 0;
+        }
+        .arch-connector-line {
+            width: 2px;
+            height: 30px;
+            background: var(--border);
+        }
+        .arch-connector-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        /* Delegation patterns */
+        .delegation-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .delegation-path {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            padding: 0.5rem 0.75rem;
+            background: var(--surface);
+            border-radius: 8px;
+        }
+        .del-from, .del-to {
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.3rem 0.75rem;
+            border-radius: 6px;
+            background: var(--surface2);
+            white-space: nowrap;
+        }
+        .del-to.del-human { background: rgba(249,115,22,0.15); color: var(--orange); }
+        .del-to.del-auto { background: rgba(16,185,129,0.15); color: var(--green); }
+        .del-to.del-spot { background: rgba(245,158,11,0.15); color: var(--yellow); }
+        .del-arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .del-condition {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+
+        /* External services */
+        .arch-external {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border: 1px dashed var(--border);
+            border-radius: 10px;
+            position: relative;
+        }
+        .ext-service {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--surface);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.8rem;
+            min-width: 160px;
+        }
+        .ext-service small { color: var(--text-muted); font-size: 0.7rem; }
+        .ext-icon { font-size: 1.3rem; }
+
+        /* Sequence Diagram */
+        .sequence-container {
+            margin: 1.5rem 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        .seq-step {
+            display: flex;
+            align-items: stretch;
+            border-left: 3px solid var(--accent);
+            margin-left: 1.5rem;
+            padding: 0.75rem 1rem 0.75rem 1.5rem;
+            position: relative;
+            transition: background 0.2s;
+        }
+        .seq-step:hover { background: rgba(59,130,246,0.03); }
+        .seq-step.seq-gate { border-left-color: var(--orange); background: rgba(249,115,22,0.03); }
+        .seq-step.seq-verify { border-left-color: var(--green); background: rgba(16,185,129,0.03); }
+        .seq-step.seq-retry { border-left-color: var(--yellow); background: rgba(245,158,11,0.03); }
+        .seq-num {
+            min-width: 36px;
+            height: 36px;
+            background: var(--surface2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+        .seq-content { flex: 1; }
+        .seq-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.2rem; }
+        .seq-desc { font-size: 0.8rem; color: var(--text-muted); }
+        .seq-actor {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            min-width: 80px;
+            text-align: right;
+            align-self: center;
+            padding-left: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Multi-Agent Architecture Feasibility Assessment</h1>
+        <p class="subtitle">Construction Payment Application & Invoice Reconciliation Platform — July 2026</p>
+
+        <!-- ============ SECTION: Full Architecture Diagram ============ -->
+        <h2>Complete Agentic Solution Architecture</h2>
+
+        <div class="arch-diagram">
+            <!-- Top: User / Frontend -->
+            <div class="arch-layer" style="border-color: var(--accent);">
+                <div class="arch-layer-label">PRESENTATION LAYER</div>
+                <div class="arch-row">
+                    <div class="arch-box box-ui">
+                        <div class="arch-box-icon">🖥️</div>
+                        <div class="arch-box-title">React Frontend</div>
+                        <div class="arch-box-desc">Upload PDFs • View Extractions • Approve/Reject • Exception Review</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arch-connector">
+                <div class="arch-connector-line"></div>
+                <div class="arch-connector-label">REST API + Cookie Auth</div>
+            </div>
+
+            <!-- API Layer -->
+            <div class="arch-layer" style="border-color: var(--text-muted);">
+                <div class="arch-layer-label">API LAYER</div>
+                <div class="arch-row">
+                    <div class="arch-box box-api">
+                        <div class="arch-box-icon">⚡</div>
+                        <div class="arch-box-title">Express.js API</div>
+                        <div class="arch-box-desc">Auth • Packages • Pipeline Control • File Upload → Azure Blob</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arch-connector">
+                <div class="arch-connector-line"></div>
+                <div class="arch-connector-label">Triggers Pipeline</div>
+            </div>
+
+            <!-- Orchestrator -->
+            <div class="arch-layer" style="border-color: var(--accent2); background: rgba(139,92,246,0.03);">
+                <div class="arch-layer-label">AGENT ORCHESTRATOR (~300 lines)</div>
+                <div class="arch-row">
+                    <div class="arch-box box-orchestrator" style="flex:1; max-width:100%;">
+                        <div class="arch-box-icon">🧠</div>
+                        <div class="arch-box-title">Lightweight Agent Orchestrator</div>
+                        <div class="arch-box-desc">
+                            Manages agent lifecycle • Routes by confidence thresholds • Enforces cost budgets<br>
+                            Max retries: 2 • Logs all delegation decisions • Tracks token usage per package
+                        </div>
+                        <div class="arch-box-meta">
+                            <span class="meta-tag tag-custom">Custom Code</span>
+                            <span class="meta-tag tag-new">NEW</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arch-connector">
+                <div class="arch-connector-line" style="height:20px;"></div>
+            </div>
+
+            <!-- Agent Layer -->
+            <div class="arch-layer agent-layer" style="border-color: var(--green); background: rgba(16,185,129,0.03);">
+                <div class="arch-layer-label">AGENT LAYER</div>
+                
+                <!-- Row 1: Main pipeline agents -->
+                <div class="arch-row">
+                    <div class="arch-box box-agent agent-classify">
+                        <div class="arch-box-icon">📋</div>
+                        <div class="arch-box-title">Classification Agent</div>
+                        <div class="arch-box-desc">
+                            Tier 1: Heuristic (keywords + byte scan)<br>
+                            Tier 2: LLM text classifier<br>
+                            Tier 3: Vision model (page image)
+                        </div>
+                        <div class="arch-box-meta">
+                            <span class="meta-tag tag-llm">LLM</span>
+                            <span class="meta-tag tag-enhanced">ENHANCED</span>
+                        </div>
+                    </div>
+                    <div class="arch-box box-agent agent-extract">
+                        <div class="arch-box-icon">📄</div>
+                        <div class="arch-box-title">Extraction Agent</div>
+                        <div class="arch-box-desc">
+                            File 1: pdfplumber (deterministic)<br>
+                            File 2: OCR → Page Scan → Packet Extract<br>
+                            File 3: LLM compliance extraction
+                        </div>
+                        <div class="arch-box-meta">
+                            <span class="meta-tag tag-llm">LLM + Deterministic</span>
+                            <span class="meta-tag tag-enhanced">ENHANCED</span>
+                        </div>
+                    </div>
+                    <div class="arch-box box-agent agent-verify">
+                        <div class="arch-box-icon">✅</div>
+                        <div class="arch-box-title">Verification Agent</div>
+                        <div class="arch-box-desc">
+                            Compares extraction vs source image<br>
+                            Scores confidence per field (0–1)<br>
+                            Routes: auto-approve / spot-check / retry
+                        </div>
+                        <div class="arch-box-meta">
+                            <span class="meta-tag tag-llm">LLM Vision</span>
+                            <span class="meta-tag tag-new">NEW</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 2: Support agents -->
+                <div class="arch-row">
+                    <div class="arch-box box-agent agent-retry">
+                        <div class="arch-box-icon">🔄</div>
+                        <div class="arch-box-title">Retry Agent</div>
+                        <div class="arch-box-desc">
+                            Strategy A: Different prompt template<br>
+                            Strategy B: Page-by-page extraction<br>
+                            Strategy C: Vision-based extraction<br>
+                            Budget: max 2 retries, cost cap
+                        </div>
+                        <div class="arch-box-meta">
+                            <span class="meta-tag tag-llm">LLM</span>
+                            <span class="meta-tag tag-new">NEW</span>
+                        </div>
+                    </div>
+                    <div class="arch-box box-agent agent-reconcile">
+                        <div class="arch-box-icon">⚖️</div>
+                        <div class="arch-box-title">Reconciliation Engine</div>
+                        <div class="arch-box-desc">
+                            Rule 1: Cross-file mismatch (GC vs Sub)<br>
+                            Rule 2: Math errors (column arithmetic)<br>
+                            Rule 3: Retainage deviation<br>
+                            Rule 4: Period continuity<br>
+                            Rule 5: Missing docs (from File 3)
+                        </div>
+                        <div class="arch-box-meta">
+                            <span class="meta-tag tag-deterministic">Deterministic</span>
+                            <span class="meta-tag tag-keep">KEEP AS-IS</span>
+                        </div>
+                    </div>
+                    <div class="arch-box box-agent agent-human">
+                        <div class="arch-box-icon">👤</div>
+                        <div class="arch-box-title">Human Review Gate</div>
+                        <div class="arch-box-desc">
+                            Gate 1: Classification confirmation<br>
+                            Gate 2: Extraction plan approval<br>
+                            Gate 3: Exception resolution<br>
+                            Gate 4: Final package approval<br>
+                            <strong>Only sees low-confidence items</strong>
+                        </div>
+                        <div class="arch-box-meta">
+                            <span class="meta-tag tag-human">Human-in-Loop</span>
+                            <span class="meta-tag tag-enhanced">REDUCED LOAD</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arch-connector">
+                <div class="arch-connector-line" style="height:20px;"></div>
+            </div>
+
+            <!-- Delegation Arrows Diagram -->
+            <div class="arch-layer" style="border-color: var(--yellow); background: rgba(245,158,11,0.03);">
+                <div class="arch-layer-label">DELEGATION PATTERNS</div>
+                <div class="delegation-grid">
+                    <div class="delegation-path">
+                        <div class="del-from">Classification</div>
+                        <div class="del-arrow">
+                            <svg width="60" height="24"><path d="M0 12 H50 M42 6 L50 12 L42 18" stroke="#8b5cf6" fill="none" stroke-width="2"/></svg>
+                            <span class="del-condition">conf &lt; 0.7</span>
+                        </div>
+                        <div class="del-to">LLM Fallback</div>
+                        <div class="del-arrow">
+                            <svg width="60" height="24"><path d="M0 12 H50 M42 6 L50 12 L42 18" stroke="#8b5cf6" fill="none" stroke-width="2"/></svg>
+                            <span class="del-condition">still low</span>
+                        </div>
+                        <div class="del-to">Vision Model</div>
+                    </div>
+                    <div class="delegation-path">
+                        <div class="del-from">Extraction</div>
+                        <div class="del-arrow">
+                            <svg width="60" height="24"><path d="M0 12 H50 M42 6 L50 12 L42 18" stroke="#10b981" fill="none" stroke-width="2"/></svg>
+                            <span class="del-condition">always</span>
+                        </div>
+                        <div class="del-to">Verification</div>
+                        <div class="del-arrow">
+                            <svg width="60" height="24"><path d="M0 12 H50 M42 6 L50 12 L42 18" stroke="#f59e0b" fill="none" stroke-width="2"/></svg>
+                            <span class="del-condition">conf &lt; 0.5</span>
+                        </div>
+                        <div class="del-to">Retry Agent</div>
+                        <div class="del-arrow">
+                            <svg width="60" height="24"><path d="M0 12 H50 M42 6 L50 12 L42 18" stroke="#ef4444" fill="none" stroke-width="2"/></svg>
+                            <span class="del-condition">still low</span>
+                        </div>
+                        <div class="del-to del-human">👤 Human</div>
+                    </div>
+                    <div class="delegation-path">
+                        <div class="del-from">Verification</div>
+                        <div class="del-arrow">
+                            <svg width="60" height="24"><path d="M0 12 H50 M42 6 L50 12 L42 18" stroke="#10b981" fill="none" stroke-width="2"/></svg>
+                            <span class="del-condition">conf ≥ 0.85</span>
+                        </div>
+                        <div class="del-to del-auto">✓ Auto-Approve</div>
+                        <div class="del-arrow">
+                            <svg width="60" height="24"><path d="M0 12 H50 M42 6 L50 12 L42 18" stroke="#f59e0b" fill="none" stroke-width="2"/></svg>
+                            <span class="del-condition">0.5–0.84</span>
+                        </div>
+                        <div class="del-to del-spot">⚡ Spot-Check</div>
+                    </div>
+                    <div class="delegation-path">
+                        <div class="del-from">Retry</div>
+                        <div class="del-arrow">
+                            <svg width="60" height="24"><path d="M0 12 H50 M42 6 L50 12 L42 18" stroke="#3b82f6" fill="none" stroke-width="2"/></svg>
+                            <span class="del-condition">re-verify</span>
+                        </div>
+                        <div class="del-to">Verification</div>
+                        <div class="del-arrow">
+                            <svg width="60" height="24"><path d="M0 12 H50 M42 6 L50 12 L42 18" stroke="#ef4444" fill="none" stroke-width="2"/></svg>
+                            <span class="del-condition">max retries</span>
+                        </div>
+                        <div class="del-to del-human">👤 Escalate</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arch-connector">
+                <div class="arch-connector-line" style="height:20px;"></div>
+            </div>
+
+            <!-- Infrastructure Layer -->
+            <div class="arch-layer" style="border-color: var(--orange);">
+                <div class="arch-layer-label">LLM INFRASTRUCTURE</div>
+                <div class="arch-row">
+                    <div class="arch-box box-infra">
+                        <div class="arch-box-icon">📝</div>
+                        <div class="arch-box-title">Prompt Registry</div>
+                        <div class="arch-box-desc">Versioned prompt files • A/B testing</div>
+                    </div>
+                    <div class="arch-box box-infra">
+                        <div class="arch-box-icon">🔧</div>
+                        <div class="arch-box-title">Model Config</div>
+                        <div class="arch-box-desc">Single env source • Deployment routing</div>
+                    </div>
+                    <div class="arch-box box-infra">
+                        <div class="arch-box-icon">📊</div>
+                        <div class="arch-box-title">Output Validator</div>
+                        <div class="arch-box-desc">JSON Schema • Pydantic • Zod</div>
+                    </div>
+                    <div class="arch-box box-infra">
+                        <div class="arch-box-icon">🔍</div>
+                        <div class="arch-box-title">Eval Harness</div>
+                        <div class="arch-box-desc">Golden PDFs • Accuracy metrics</div>
+                    </div>
+                    <div class="arch-box box-infra">
+                        <div class="arch-box-icon">💰</div>
+                        <div class="arch-box-title">Token Tracker</div>
+                        <div class="arch-box-desc">Per-agent • Per-package • Alerts</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arch-connector">
+                <div class="arch-connector-line" style="height:20px;"></div>
+            </div>
+
+            <!-- Data Layer -->
+            <div class="arch-layer" style="border-color: var(--red);">
+                <div class="arch-layer-label">DATA & STORAGE LAYER</div>
+                <div class="arch-row">
+                    <div class="arch-box box-data">
+                        <div class="arch-box-icon">🗄️</div>
+                        <div class="arch-box-title">Azure SQL (Prisma)</div>
+                        <div class="arch-box-desc">Packages • Headers • SOV Lines • Exceptions • Audit Events • Provenance</div>
+                    </div>
+                    <div class="arch-box box-data">
+                        <div class="arch-box-icon">☁️</div>
+                        <div class="arch-box-title">Azure Blob Storage</div>
+                        <div class="arch-box-desc">Source PDFs • Page Images • OCR Cache</div>
+                    </div>
+                    <div class="arch-box box-data">
+                        <div class="arch-box-icon">📈</div>
+                        <div class="arch-box-title">Provenance Store</div>
+                        <div class="arch-box-desc">RawExtractedField • Source page • Bbox • Confidence • Agent run ID</div>
+                        <div class="arch-box-meta"><span class="meta-tag tag-new">NEW</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- External Services -->
+            <div class="arch-external">
+                <div class="arch-layer-label" style="color: var(--text-muted);">EXTERNAL SERVICES</div>
+                <div class="arch-row" style="margin-top:0.75rem;">
+                    <div class="ext-service">
+                        <span class="ext-icon">🤖</span>
+                        <span>Azure OpenAI<br><small>gpt-4o / gpt-5.4</small></span>
+                    </div>
+                    <div class="ext-service">
+                        <span class="ext-icon">👁️</span>
+                        <span>Azure Doc Intelligence<br><small>prebuilt-layout OCR</small></span>
+                    </div>
+                    <div class="ext-service">
+                        <span class="ext-icon">🔐</span>
+                        <span>Azure Key Vault<br><small>Secrets management</small></span>
+                    </div>
+                    <div class="ext-service">
+                        <span class="ext-icon">📧</span>
+                        <span>Notifications<br><small>Escalation alerts</small></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ SECTION: End-to-End Sequence ============ -->
+        <h2>End-to-End Processing Sequence</h2>
+        
+        <div class="sequence-container">
+            <div class="seq-step">
+                <div class="seq-num">1</div>
+                <div class="seq-content">
+                    <div class="seq-title">Document Upload</div>
+                    <div class="seq-desc">User uploads PDF package → stored in Azure Blob → pipeline triggered</div>
+                </div>
+                <div class="seq-actor">User</div>
+            </div>
+            <div class="seq-step">
+                <div class="seq-num">2</div>
+                <div class="seq-content">
+                    <div class="seq-title">Classification Agent (3-tier cascade)</div>
+                    <div class="seq-desc">Heuristic scan → if uncertain: LLM text classification → if still uncertain: Vision model on first page</div>
+                </div>
+                <div class="seq-actor">Agent</div>
+            </div>
+            <div class="seq-step seq-gate">
+                <div class="seq-num">⏸️</div>
+                <div class="seq-content">
+                    <div class="seq-title">Human Confirms Classification</div>
+                    <div class="seq-desc">User verifies file role assignments (File 1, File 2, File 3). Only shows items where classification confidence &lt; 0.9.</div>
+                </div>
+                <div class="seq-actor">Human Gate</div>
+            </div>
+            <div class="seq-step">
+                <div class="seq-num">3</div>
+                <div class="seq-content">
+                    <div class="seq-title">File 1 Extraction (Deterministic)</div>
+                    <div class="seq-desc">G702 header: pdfplumber + regex (fallback: LLM). G703 lines: coordinate-based column mapping. No LLM needed.</div>
+                </div>
+                <div class="seq-actor">Deterministic</div>
+            </div>
+            <div class="seq-step">
+                <div class="seq-num">4</div>
+                <div class="seq-content">
+                    <div class="seq-title">Plan Generation</div>
+                    <div class="seq-desc">Groups G703 SOV lines by subcontractor name → creates extraction plan with confirmed sub list</div>
+                </div>
+                <div class="seq-actor">Deterministic</div>
+            </div>
+            <div class="seq-step seq-gate">
+                <div class="seq-num">⏸️</div>
+                <div class="seq-content">
+                    <div class="seq-title">Human Confirms Plan</div>
+                    <div class="seq-desc">User reviews/edits subcontractor list before extraction proceeds</div>
+                </div>
+                <div class="seq-actor">Human Gate</div>
+            </div>
+            <div class="seq-step">
+                <div class="seq-num">5</div>
+                <div class="seq-content">
+                    <div class="seq-title">File 2 Extraction (LLM)</div>
+                    <div class="seq-desc">OCR all pages → Page Scan Agent classifies each page (G702/G703/supporting) → Packet Extraction per subcontractor</div>
+                </div>
+                <div class="seq-actor">Agent</div>
+            </div>
+            <div class="seq-step seq-verify">
+                <div class="seq-num">6</div>
+                <div class="seq-content">
+                    <div class="seq-title">Verification Agent Scores Results</div>
+                    <div class="seq-desc">Compares each extracted field against source page image → outputs confidence score per field → routes by threshold</div>
+                </div>
+                <div class="seq-actor">Agent (NEW)</div>
+            </div>
+            <div class="seq-step seq-retry">
+                <div class="seq-num">6b</div>
+                <div class="seq-content">
+                    <div class="seq-title">Retry Agent (if needed)</div>
+                    <div class="seq-desc">Low-confidence fields → retry with alternative strategy → re-verify → escalate if still low (max 2 attempts)</div>
+                </div>
+                <div class="seq-actor">Agent (NEW)</div>
+            </div>
+            <div class="seq-step">
+                <div class="seq-num">7</div>
+                <div class="seq-content">
+                    <div class="seq-title">File 3 Extraction (LLM)</div>
+                    <div class="seq-desc">Extract compliance fields from supporting docs: lien waivers, COIs, stored material affidavits</div>
+                </div>
+                <div class="seq-actor">Agent (NEW)</div>
+            </div>
+            <div class="seq-step">
+                <div class="seq-num">8</div>
+                <div class="seq-content">
+                    <div class="seq-title">Reconciliation Engine</div>
+                    <div class="seq-desc">Deterministic rules: cross-file mismatch, math errors, retainage deviation, period continuity, missing docs</div>
+                </div>
+                <div class="seq-actor">Deterministic</div>
+            </div>
+            <div class="seq-step">
+                <div class="seq-num">9</div>
+                <div class="seq-content">
+                    <div class="seq-title">Exception Generation</div>
+                    <div class="seq-desc">Flag discrepancies with severity/risk scores → group by subcontractor → present for review</div>
+                </div>
+                <div class="seq-actor">Deterministic</div>
+            </div>
+            <div class="seq-step seq-gate">
+                <div class="seq-num">⏸️</div>
+                <div class="seq-content">
+                    <div class="seq-title">Human Reviews Exceptions + Low-Confidence Fields</div>
+                    <div class="seq-desc">Only sees: flagged exceptions + fields where verification confidence was below auto-approve threshold</div>
+                </div>
+                <div class="seq-actor">Human Gate</div>
+            </div>
+            <div class="seq-step" style="border-left-color: var(--green);">
+                <div class="seq-num">✓</div>
+                <div class="seq-content">
+                    <div class="seq-title">Package Approved</div>
+                    <div class="seq-desc">All fields verified (auto or human) → package marked complete → audit trail sealed</div>
+                </div>
+                <div class="seq-actor">Complete</div>
+            </div>
+        </div>
+
+        <!-- ============ SECTION: Agent Overview ============ -->
+        <h2>Proposed Agent Architecture</h2>
+        
+        <div class="card-grid">
+            <div class="card">
+                <div class="card-title"><span style="color:var(--accent2)">◆</span> Classification Agent</div>
+                <div class="card-body">Determines file type (File 1/2/3). Cascades: heuristic → LLM → vision model if uncertain. Delegates to Verification Agent when confidence &lt; 0.7.</div>
+            </div>
+            <div class="card">
+                <div class="card-title"><span style="color:var(--accent)">◆</span> Extraction Agent</div>
+                <div class="card-body">Extracts structured data from documents. File 1: deterministic (pdfplumber). File 2: OCR + LLM. Can be invoked with different strategies on retry.</div>
+            </div>
+            <div class="card">
+                <div class="card-title"><span style="color:var(--green)">◆</span> Verification Agent</div>
+                <div class="card-body">Scores confidence per extracted field (0–1). Compares extraction against source page image. Routes low-confidence fields to Retry Agent or Human.</div>
+            </div>
+            <div class="card">
+                <div class="card-title"><span style="color:var(--yellow)">◆</span> Retry Agent</div>
+                <div class="card-body">Re-attempts extraction with alternative strategy: different prompt, page-by-page mode, or vision model. Max 2 retries per packet. Enforces cost budget.</div>
+            </div>
+            <div class="card">
+                <div class="card-title"><span style="color:var(--orange)">◆</span> Reconciliation Agent</div>
+                <div class="card-body">Runs deterministic rules (math, cross-file, retainage, continuity). NOT LLM-powered — remains rule-based. Delegates ambiguous cases to human.</div>
+            </div>
+        </div>
+
+        <!-- ============ SECTION: Flow Diagram ============ -->
+        <h2>Agent Delegation Flow</h2>
+        
+        <div class="flow-container">
+            <div class="flow-diagram">
+                <div class="agent-node classification">
+                    <div class="label">STEP 1</div>
+                    <div class="name">Classification<br>Agent</div>
+                </div>
+                <div>
+                    <div class="arrow">→</div>
+                    <div class="arrow-label">confidence ≥ 0.85</div>
+                </div>
+                <div class="agent-node">
+                    <div class="label">STEP 2</div>
+                    <div class="name">Extraction<br>Agent</div>
+                </div>
+                <div>
+                    <div class="arrow">→</div>
+                    <div class="arrow-label">always</div>
+                </div>
+                <div class="agent-node verification">
+                    <div class="label">STEP 3</div>
+                    <div class="name">Verification<br>Agent</div>
+                </div>
+                <div>
+                    <div class="arrow">→</div>
+                    <div class="arrow-label">confidence ≥ 0.85</div>
+                </div>
+                <div class="agent-node" style="border-color:var(--green)">
+                    <div class="label">STEP 4</div>
+                    <div class="name">✓ Auto<br>Approve</div>
+                </div>
+            </div>
+            <br>
+            <div class="flow-diagram">
+                <div class="agent-node verification">
+                    <div class="label">IF LOW</div>
+                    <div class="name">Verification<br>(score &lt; 0.5)</div>
+                </div>
+                <div>
+                    <div class="arrow">→</div>
+                    <div class="arrow-label">delegates</div>
+                </div>
+                <div class="agent-node retry">
+                    <div class="label">RETRY</div>
+                    <div class="name">Retry Agent<br>(alt strategy)</div>
+                </div>
+                <div>
+                    <div class="arrow">→</div>
+                    <div class="arrow-label">re-verify</div>
+                </div>
+                <div class="agent-node verification">
+                    <div class="label">RE-CHECK</div>
+                    <div class="name">Verification<br>Agent</div>
+                </div>
+                <div>
+                    <div class="arrow">→</div>
+                    <div class="arrow-label">still low?</div>
+                </div>
+                <div class="agent-node human">
+                    <div class="label">ESCALATE</div>
+                    <div class="name">👤 Human<br>Review</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ SECTION: Confidence Routing ============ -->
+        <h2>Confidence-Based Routing Logic</h2>
+        
+        <div class="flow-detailed">
+            <div class="flow-row green">
+                <span class="flow-step">Score ≥ 0.85</span>
+                <span class="flow-desc">High confidence — auto-approve field. No human review needed.</span>
+                <span class="flow-badge badge-green">AUTO-APPROVE</span>
+            </div>
+            <div class="flow-row yellow">
+                <span class="flow-step">Score 0.50 – 0.84</span>
+                <span class="flow-desc">Medium confidence — flag for quick human spot-check. Show extracted value + source highlight.</span>
+                <span class="flow-badge badge-yellow">SPOT-CHECK</span>
+            </div>
+            <div class="flow-row red">
+                <span class="flow-step">Score &lt; 0.50</span>
+                <span class="flow-desc">Low confidence — delegate to Retry Agent with alternative strategy. If retry also low, escalate to human.</span>
+                <span class="flow-badge badge-red">RETRY → ESCALATE</span>
+            </div>
+            <div class="flow-row purple">
+                <span class="flow-step">Classification uncertain</span>
+                <span class="flow-desc">Heuristic confidence &lt; 0.7 — cascade to LLM classifier, then vision model if still uncertain.</span>
+                <span class="flow-badge badge-blue">CASCADE</span>
+            </div>
+        </div>
+
+        <!-- ============ SECTION: Cost & Latency ============ -->
+        <h2>Cost & Latency Impact</h2>
+        
+        <div class="cost-grid">
+            <div class="cost-card">
+                <h4>Token Usage per Package</h4>
+                <div class="cost-bar-container">
+                    <div class="cost-bar-label"><span>Current (single-pass)</span><span>~50K tokens</span></div>
+                    <div class="cost-bar"><div class="cost-bar-fill fill-blue" style="width:33%"></div></div>
+                </div>
+                <div class="cost-bar-container">
+                    <div class="cost-bar-label"><span>Happy path (+ verification)</span><span>~75K tokens</span></div>
+                    <div class="cost-bar"><div class="cost-bar-fill fill-green" style="width:50%"></div></div>
+                </div>
+                <div class="cost-bar-container">
+                    <div class="cost-bar-label"><span>With retries (worst case)</span><span>~150K tokens</span></div>
+                    <div class="cost-bar"><div class="cost-bar-fill fill-yellow" style="width:100%"></div></div>
+                </div>
+            </div>
+            <div class="cost-card">
+                <h4>Monthly Cost Estimate (50 packages)</h4>
+                <div class="cost-bar-container">
+                    <div class="cost-bar-label"><span>Current</span><span>~$80–120</span></div>
+                    <div class="cost-bar"><div class="cost-bar-fill fill-blue" style="width:30%"></div></div>
+                </div>
+                <div class="cost-bar-container">
+                    <div class="cost-bar-label"><span>With agents (typical)</span><span>~$150–220</span></div>
+                    <div class="cost-bar"><div class="cost-bar-fill fill-green" style="width:55%"></div></div>
+                </div>
+                <div class="cost-bar-container">
+                    <div class="cost-bar-label"><span>With agents (worst)</span><span>~$300–400</span></div>
+                    <div class="cost-bar"><div class="cost-bar-fill fill-red" style="width:100%"></div></div>
+                </div>
+            </div>
+            <div class="cost-card">
+                <h4>Human Review Reduction</h4>
+                <div class="cost-bar-container">
+                    <div class="cost-bar-label"><span>Current: review ALL fields</span><span>100%</span></div>
+                    <div class="cost-bar"><div class="cost-bar-fill fill-red" style="width:100%"></div></div>
+                </div>
+                <div class="cost-bar-container">
+                    <div class="cost-bar-label"><span>Target: review flagged only</span><span>~30%</span></div>
+                    <div class="cost-bar"><div class="cost-bar-fill fill-green" style="width:30%"></div></div>
+                </div>
+                <div class="cost-bar-container">
+                    <div class="cost-bar-label"><span>Human time saved</span><span>~70%</span></div>
+                    <div class="cost-bar"><div class="cost-bar-fill fill-blue" style="width:70%"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ SECTION: Approach Comparison ============ -->
+        <h2>Implementation Approach Comparison</h2>
+        
+        <div class="approach-grid">
+            <div class="approach-card">
+                <h4>Raw Custom Code</h4>
+                <ul>
+                    <li>if/else routing in pipeline.js</li>
+                    <li>No abstraction for agents</li>
+                    <li>Fast to start, messy at scale</li>
+                    <li>Hard to add new agents later</li>
+                    <li>Debugging: grep through logs</li>
+                    <li>≤3 agents max before spaghetti</li>
+                </ul>
+            </div>
+            <div class="approach-card recommended">
+                <h4>Lightweight Custom Orchestrator</h4>
+                <ul>
+                    <li>~300 lines structured routing</li>
+                    <li>Consistent agent interface</li>
+                    <li>Confidence threshold config</li>
+                    <li>Full delegation logging</li>
+                    <li>Cost budget enforcement</li>
+                    <li>Easy to add agents (5-10)</li>
+                    <li>No external dependency</li>
+                </ul>
+            </div>
+            <div class="approach-card">
+                <h4>Full Framework (SK / LangGraph)</h4>
+                <ul>
+                    <li>Heavy dependency</li>
+                    <li>Learning curve for team</li>
+                    <li>Abstractions for 10+ agents</li>
+                    <li>Built-in memory/state</li>
+                    <li>Overkill for 5 agents</li>
+                    <li>Debugging through framework layers</li>
+                    <li>Migration: 12-16 weeks</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ============ SECTION: Feasibility Verdicts ============ -->
+        <h2>Feasibility Scores</h2>
+
+        <div class="verdict-meter">
+            <span class="meter-label">Technical Feasibility</span>
+            <div class="meter-bar"><div class="meter-fill" style="width:90%"></div></div>
+            <span class="meter-value">9/10</span>
+        </div>
+        <div class="verdict-meter">
+            <span class="meter-label">Cost Justification</span>
+            <div class="meter-bar"><div class="meter-fill" style="width:75%"></div></div>
+            <span class="meter-value">7.5/10</span>
+        </div>
+        <div class="verdict-meter">
+            <span class="meter-label">Accuracy Improvement</span>
+            <div class="meter-bar"><div class="meter-fill" style="width:80%"></div></div>
+            <span class="meter-value">8/10</span>
+        </div>
+        <div class="verdict-meter">
+            <span class="meter-label">Human Workload Reduction</span>
+            <div class="meter-bar"><div class="meter-fill" style="width:85%"></div></div>
+            <span class="meter-value">8.5/10</span>
+        </div>
+        <div class="verdict-meter">
+            <span class="meter-label">Implementation Complexity</span>
+            <div class="meter-bar"><div class="meter-fill" style="width:55%"></div></div>
+            <span class="meter-value">5.5/10</span>
+        </div>
+        <div class="verdict-meter">
+            <span class="meter-label">Debugging Difficulty</span>
+            <div class="meter-bar"><div class="meter-fill" style="width:45%"></div></div>
+            <span class="meter-value">4.5/10</span>
+        </div>
+
+        <!-- ============ SECTION: Risks ============ -->
+        <h2>Key Risks & Mitigations</h2>
+
+        <div class="risk-item">
+            <span class="risk-level risk-high">HIGH</span>
+            <div class="risk-content">
+                <div class="risk-title">Verification agent disagrees with correct extraction</div>
+                <div class="risk-desc">Mitigation: Verification scores confidence, never auto-rejects. Only flags or retries. Human is final arbiter.</div>
+            </div>
+        </div>
+        <div class="risk-item">
+            <span class="risk-level risk-high">HIGH</span>
+            <div class="risk-content">
+                <div class="risk-title">Latency doubles/triples on complex packages</div>
+                <div class="risk-desc">Mitigation: Acceptable if human review wait-time drops proportionally. Track total end-to-end time including human queue.</div>
+            </div>
+        </div>
+        <div class="risk-item">
+            <span class="risk-level risk-med">MED</span>
+            <div class="risk-content">
+                <div class="risk-title">Cost blowup on messy PDFs (repeated retries)</div>
+                <div class="risk-desc">Mitigation: Per-package token budget cap. Max 2 retries per packet. After budget exceeded → escalate to human.</div>
+            </div>
+        </div>
+        <div class="risk-item">
+            <span class="risk-level risk-med">MED</span>
+            <div class="risk-content">
+                <div class="risk-title">Debugging multi-agent chains becomes opaque</div>
+                <div class="risk-desc">Mitigation: Every agent call logs input hash, output, confidence score, and delegation decision. Full trace per packet.</div>
+            </div>
+        </div>
+        <div class="risk-item">
+            <span class="risk-level risk-low">LOW</span>
+            <div class="risk-content">
+                <div class="risk-title">Infinite retry loops</div>
+                <div class="risk-desc">Mitigation: Hard cap of 2 retries. Circuit breaker pattern — if retry doesn't improve score by ≥0.15, stop immediately.</div>
+            </div>
+        </div>
+
+        <!-- ============ SECTION: Where Agents DON'T Help ============ -->
+        <h2>Where Agents Add No Value (Keep Deterministic)</h2>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>Component</th><th>Current Approach</th><th>Agent Needed?</th><th>Reason</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>G703 Line-Item Parsing</td><td>pdfplumber coordinates</td><td style="color:var(--red)">✗ No</td><td>Fixed layout, deterministic, faster and cheaper than LLM</td></tr>
+                    <tr><td>Reconciliation Rules</td><td>Arithmetic + business rules</td><td style="color:var(--red)">✗ No</td><td>Must be deterministic for financial compliance/audit</td></tr>
+                    <tr><td>Exception Generation</td><td>Rule engine</td><td style="color:var(--red)">✗ No</td><td>Exceptions must be reproducible and testable</td></tr>
+                    <tr><td>Pipeline State Machine</td><td>Prisma + sequential steps</td><td style="color:var(--red)">✗ No</td><td>State transitions are fixed, not dynamic</td></tr>
+                    <tr><td>Plan Derivation</td><td>Group by contractor name</td><td style="color:var(--red)">✗ No</td><td>Data is already structured — no reasoning needed</td></tr>
+                    <tr><td>Approval Workflow</td><td>Human gates</td><td style="color:var(--red)">✗ No</td><td>Business compliance requirement, not a technical decision</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ============ SECTION: Implementation Timeline ============ -->
+        <h2>Recommended Implementation Timeline</h2>
+
+        <div class="timeline">
+            <div class="timeline-item">
+                <div class="timeline-phase">Phase 1 — Weeks 1–3</div>
+                <div class="timeline-title">Foundation: Eval Harness + Structured Outputs</div>
+                <div class="timeline-desc">Build golden test PDF set. Add JSON schema enforcement. Measure current accuracy baseline. Without this, you can't prove agents help.</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-phase">Phase 1 — Weeks 3–5</div>
+                <div class="timeline-title">Verification Agent (MVP)</div>
+                <div class="timeline-desc">Single LLM call post-extraction: compare extracted JSON against source page image. Output: field-level confidence scores. Route to human only if low.</div>
+            </div>
+            <div class="timeline-item phase2">
+                <div class="timeline-phase">Phase 2 — Weeks 5–7</div>
+                <div class="timeline-title">Retry Agent + Orchestrator</div>
+                <div class="timeline-desc">Build lightweight orchestrator (~300 lines). Add retry with alternative extraction strategies. Enforce max 2 retries + cost budget.</div>
+            </div>
+            <div class="timeline-item phase2">
+                <div class="timeline-phase">Phase 2 — Weeks 7–9</div>
+                <div class="timeline-title">Classification Cascade</div>
+                <div class="timeline-desc">Add LLM fallback for uncertain classification. Three-tier: heuristic → text LLM → vision LLM. Reduces misclassification rate.</div>
+            </div>
+            <div class="timeline-item phase3">
+                <div class="timeline-phase">Phase 3 — Weeks 9–12</div>
+                <div class="timeline-title">Measure, Tune, Expand</div>
+                <div class="timeline-desc">Run eval harness on full golden set. Tune confidence thresholds. Measure human review reduction. Decide if more agents warranted.</div>
+            </div>
+        </div>
+
+        <!-- ============ SECTION: Final Decision ============ -->
+        <div class="decision-box">
+            <h3>VERDICT: FEASIBLE — Implement Selectively</h3>
+            <p>
+                Multi-agent delegation is technically feasible and will measurably reduce human review burden. 
+                Build a <strong>lightweight custom orchestrator</strong> (not a vendor framework) with 
+                <strong>Verification Agent first</strong>, measure accuracy lift, then expand. 
+                Keep all deterministic logic (G703, reconciliation, state machine) untouched. 
+                A full agent framework (Semantic Kernel, LangGraph) is overkill for 4–5 agents with fixed routing.
+            </p>
+        </div>
+
+        <!-- ============ SECTION: Key Metrics to Track ============ -->
+        <h2>Success Metrics</h2>
+        
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>Metric</th><th>Current Baseline</th><th>Target (with agents)</th><th>How to Measure</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Extraction accuracy (field-level)</td><td>Unknown (no eval harness)</td><td>≥ 92%</td><td>Golden test PDF set + automated comparison</td></tr>
+                    <tr><td>Human review % of fields</td><td>100% (all fields reviewed)</td><td>≤ 30%</td><td>Count fields routed to human vs auto-approved</td></tr>
+                    <tr><td>End-to-end package time</td><td>Hours–days (human bottleneck)</td><td>≤ 30 min for high-confidence packages</td><td>Timestamp diff: upload → final approval</td></tr>
+                    <tr><td>Cost per package (LLM tokens)</td><td>~50K tokens</td><td>≤ 100K tokens avg</td><td>Token logging per agent call, aggregated</td></tr>
+                    <tr><td>False auto-approve rate</td><td>N/A (no auto-approve exists)</td><td>≤ 2%</td><td>Periodic human audit of auto-approved fields</td></tr>
+                    <tr><td>Retry success rate</td><td>N/A</td><td>≥ 60% of retried packets improve</td><td>Compare pre/post retry confidence scores</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ============ SECTION: LangGraph Architecture ============ -->
+        <h2>Revised Recommendation: LangGraph-Based Architecture</h2>
+        
+        <div class="decision-box" style="border-color: var(--accent2); margin-bottom: 2rem;">
+            <h3 style="background: linear-gradient(135deg, var(--accent2), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">REVISED DECISION: Adopt LangGraph as Orchestration Framework</h3>
+            <p>The system needs dynamic planning, extensible agent registration, and proper decision-making for a growing business application. A lightweight custom orchestrator cannot scale to handle unknown future scenarios. LangGraph provides state-machine orchestration with native human-in-the-loop, checkpointing, and tool abstraction — purpose-built for multi-step document processing.</p>
+        </div>
+
+        <h3>LangGraph State Machine — Full Pipeline</h3>
+        
+        <div class="langgraph-diagram">
+            <!-- START node -->
+            <div class="lg-node lg-start">
+                <div class="lg-node-inner">START</div>
+            </div>
+            <div class="lg-edge">
+                <div class="lg-edge-line"></div>
+            </div>
+
+            <!-- Ingest -->
+            <div class="lg-node lg-tool">
+                <div class="lg-node-label">Node</div>
+                <div class="lg-node-inner">
+                    <div class="lg-node-title">ingest_documents</div>
+                    <div class="lg-node-desc">Download from Azure Blob → extract page count → generate page images → store metadata</div>
+                    <div class="lg-node-tools">Tools: blob_download, pdf_to_images, prisma_upsert</div>
+                </div>
+            </div>
+            <div class="lg-edge">
+                <div class="lg-edge-line"></div>
+            </div>
+
+            <!-- Classify -->
+            <div class="lg-node lg-agent">
+                <div class="lg-node-label">Agent Node</div>
+                <div class="lg-node-inner">
+                    <div class="lg-node-title">classify_documents</div>
+                    <div class="lg-node-desc">3-tier cascade: heuristic → LLM → vision. Outputs file type + confidence per document.</div>
+                    <div class="lg-node-tools">Tools: heuristic_classifier, llm_classify, vision_classify</div>
+                    <div class="lg-node-model">Model: gpt-4o (vision capable)</div>
+                </div>
+            </div>
+            <div class="lg-edge lg-edge-conditional">
+                <div class="lg-edge-line"></div>
+                <div class="lg-edge-label">confidence &lt; 0.9 → interrupt</div>
+            </div>
+
+            <!-- Human gate: classify -->
+            <div class="lg-node lg-interrupt">
+                <div class="lg-node-label">Human Gate</div>
+                <div class="lg-node-inner">
+                    <div class="lg-node-title">⏸️ confirm_classification</div>
+                    <div class="lg-node-desc">interrupt() — waits for human to confirm/edit file role assignments. Only surfaces uncertain classifications.</div>
+                    <div class="lg-node-tools">LangGraph: interrupt() + resume()</div>
+                </div>
+            </div>
+            <div class="lg-edge">
+                <div class="lg-edge-line"></div>
+            </div>
+
+            <!-- Conditional: route by file type -->
+            <div class="lg-node lg-conditional">
+                <div class="lg-node-label">Conditional Edge</div>
+                <div class="lg-node-inner">
+                    <div class="lg-node-title">route_by_file_type</div>
+                    <div class="lg-node-desc">Fan-out: route each document to its extraction node based on confirmed classification</div>
+                </div>
+            </div>
+
+            <!-- Fan-out to 3 extraction paths -->
+            <div class="lg-fanout">
+                <div class="lg-fanout-branch">
+                    <div class="lg-edge lg-edge-branch">
+                        <div class="lg-edge-line-h"></div>
+                        <div class="lg-edge-label">File 1 (GC)</div>
+                    </div>
+                    <div class="lg-node lg-tool lg-small">
+                        <div class="lg-node-inner">
+                            <div class="lg-node-title">extract_file1</div>
+                            <div class="lg-node-desc">G702: pdfplumber + regex (fallback: LLM)<br>G703: coordinate parser</div>
+                            <div class="lg-node-tools">Tools: pdfplumber_g702, pdfplumber_g703, llm_extract_fallback</div>
+                            <div class="lg-node-tag tag-deterministic">Primarily Deterministic</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="lg-fanout-branch">
+                    <div class="lg-edge lg-edge-branch">
+                        <div class="lg-edge-line-h"></div>
+                        <div class="lg-edge-label">File 2 (Sub)</div>
+                    </div>
+                    <div class="lg-node lg-agent lg-small">
+                        <div class="lg-node-inner">
+                            <div class="lg-node-title">extract_file2</div>
+                            <div class="lg-node-desc">OCR → Page Scan → Packet Group → Structured Extract per sub</div>
+                            <div class="lg-node-tools">Tools: azure_ocr, llm_page_scan, llm_packet_extract</div>
+                            <div class="lg-node-tag tag-llm">LLM Agent</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="lg-fanout-branch">
+                    <div class="lg-edge lg-edge-branch">
+                        <div class="lg-edge-line-h"></div>
+                        <div class="lg-edge-label">File 3 (Support)</div>
+                    </div>
+                    <div class="lg-node lg-agent lg-small">
+                        <div class="lg-node-inner">
+                            <div class="lg-node-title">extract_file3</div>
+                            <div class="lg-node-desc">Lien waivers, COIs, stored material affidavits</div>
+                            <div class="lg-node-tools">Tools: azure_ocr, llm_compliance_extract</div>
+                            <div class="lg-node-tag tag-new">NEW</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plan generation (between file1 and file2) -->
+            <div class="lg-node lg-tool" style="margin-top: 1rem;">
+                <div class="lg-node-label">Node</div>
+                <div class="lg-node-inner">
+                    <div class="lg-node-title">generate_plan</div>
+                    <div class="lg-node-desc">Group G703 SOV lines by subcontractor → create extraction plan → filter confirmed subs</div>
+                    <div class="lg-node-tools">Tools: prisma_query, plan_builder</div>
+                    <div class="lg-node-tag tag-deterministic">Deterministic</div>
+                </div>
+            </div>
+            <div class="lg-edge lg-edge-conditional">
+                <div class="lg-edge-line"></div>
+                <div class="lg-edge-label">interrupt for plan approval</div>
+            </div>
+
+            <!-- Human gate: plan -->
+            <div class="lg-node lg-interrupt">
+                <div class="lg-node-label">Human Gate</div>
+                <div class="lg-node-inner">
+                    <div class="lg-node-title">⏸️ confirm_plan</div>
+                    <div class="lg-node-desc">interrupt() — user reviews/edits subcontractor list before File 2 extraction begins</div>
+                </div>
+            </div>
+            <div class="lg-edge">
+                <div class="lg-edge-line"></div>
+            </div>
+
+            <!-- Verification -->
+            <div class="lg-node lg-agent">
+                <div class="lg-node-label">Agent Node</div>
+                <div class="lg-node-inner">
+                    <div class="lg-node-title">verify_extraction</div>
+                    <div class="lg-node-desc">Compare each extracted field against source page image → confidence score per field (0–1)</div>
+                    <div class="lg-node-tools">Tools: vision_compare, confidence_scorer</div>
+                    <div class="lg-node-model">Model: gpt-4o (vision)</div>
+                    <div class="lg-node-tag tag-new">NEW — Core Innovation</div>
+                </div>
+            </div>
+            <div class="lg-edge lg-edge-conditional">
+                <div class="lg-edge-line"></div>
+                <div class="lg-edge-label">conditional: check confidence scores</div>
+            </div>
+
+            <!-- Conditional: confidence routing -->
+            <div class="lg-node lg-conditional">
+                <div class="lg-node-label">Conditional Edge</div>
+                <div class="lg-node-inner">
+                    <div class="lg-node-title">route_by_confidence</div>
+                    <div class="lg-node-desc">
+                        ≥ 0.85 → proceed (auto-approve)<br>
+                        0.50–0.84 → flag for spot-check<br>
+                        &lt; 0.50 → retry_extraction
+                    </div>
+                </div>
+            </div>
+
+            <!-- Retry loop -->
+            <div class="lg-retry-loop">
+                <div class="lg-retry-label">RETRY LOOP (max 2)</div>
+                <div class="lg-node lg-agent lg-small">
+                    <div class="lg-node-inner">
+                        <div class="lg-node-title">retry_extraction</div>
+                        <div class="lg-node-desc">
+                            Attempt 1: Different prompt template<br>
+                            Attempt 2: Page-by-page + vision extraction<br>
+                            Budget cap: stop if token limit exceeded
+                        </div>
+                        <div class="lg-node-tools">Tools: llm_extract_v2, vision_extract, budget_check</div>
+                        <div class="lg-node-tag tag-new">NEW</div>
+                    </div>
+                </div>
+                <div class="lg-retry-arrow">↩️ Back to verify_extraction</div>
+            </div>
+
+            <div class="lg-edge">
+                <div class="lg-edge-line"></div>
+            </div>
+
+            <!-- Reconcile -->
+            <div class="lg-node lg-tool">
+                <div class="lg-node-label">Node</div>
+                <div class="lg-node-inner">
+                    <div class="lg-node-title">reconcile</div>
+                    <div class="lg-node-desc">
+                        Rule 1: Cross-file mismatch (GC vs Sub totals)<br>
+                        Rule 2: Math errors (column arithmetic)<br>
+                        Rule 3: Retainage deviation (&gt;5% flag)<br>
+                        Rule 4: Period continuity<br>
+                        Rule 5: Missing supporting docs
+                    </div>
+                    <div class="lg-node-tools">Tools: reconcile_rules (deterministic)</div>
+                    <div class="lg-node-tag tag-deterministic">100% Deterministic — No LLM</div>
+                </div>
+            </div>
+            <div class="lg-edge">
+                <div class="lg-edge-line"></div>
+            </div>
+
+            <!-- Exception generation -->
+            <div class="lg-node lg-tool">
+                <div class="lg-node-label">Node</div>
+                <div class="lg-node-inner">
+                    <div class="lg-node-title">generate_exceptions</div>
+                    <div class="lg-node-desc">Create exception records with severity, risk score, evidence links, grouped by subcontractor</div>
+                    <div class="lg-node-tools">Tools: prisma_create_exceptions</div>
+                </div>
+            </div>
+            <div class="lg-edge lg-edge-conditional">
+                <div class="lg-edge-line"></div>
+                <div class="lg-edge-label">interrupt for review</div>
+            </div>
+
+            <!-- Human gate: review -->
+            <div class="lg-node lg-interrupt">
+                <div class="lg-node-label">Human Gate</div>
+                <div class="lg-node-inner">
+                    <div class="lg-node-title">⏸️ human_review</div>
+                    <div class="lg-node-desc">
+                        Shows ONLY: exceptions + low-confidence fields (not everything)<br>
+                        User: accept / reject / override per field<br>
+                        Override reason logged to audit trail
+                    </div>
+                    <div class="lg-node-tools">LangGraph: interrupt() + resume(value=decisions)</div>
+                </div>
+            </div>
+            <div class="lg-edge">
+                <div class="lg-edge-line"></div>
+            </div>
+
+            <!-- Finalize -->
+            <div class="lg-node lg-tool">
+                <div class="lg-node-label">Node</div>
+                <div class="lg-node-inner">
+                    <div class="lg-node-title">finalize_package</div>
+                    <div class="lg-node-desc">Seal audit trail • Mark package approved • Store provenance records • Emit completion event</div>
+                    <div class="lg-node-tools">Tools: prisma_finalize, audit_seal</div>
+                </div>
+            </div>
+            <div class="lg-edge">
+                <div class="lg-edge-line"></div>
+            </div>
+
+            <!-- END -->
+            <div class="lg-node lg-end">
+                <div class="lg-node-inner">END</div>
+            </div>
+        </div>
+
+        <!-- ============ SECTION: LangGraph State Schema ============ -->
+        <h3>LangGraph State Schema</h3>
+        
+        <div class="code-block">
+            <div class="code-header">Python — Graph State Definition</div>
+            <pre><code>from typing import TypedDict, Annotated, Literal
+from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.postgres import PostgresSaver
+
+class PackageState(TypedDict):
+    # Core identifiers
+    package_id: int
+    project_id: int
+    
+    # Documents
+    documents: list[dict]           # [{blob_url, filename, page_count, classification, confidence}]
+    page_images: dict[str, str]     # {page_key: image_url}
+    
+    # Classification
+    classifications: dict[str, dict]  # {doc_id: {file_type, confidence, method_used}}
+    classification_confirmed: bool
+    
+    # Plan
+    extraction_plan: dict           # {subcontractors: [{name, sov_lines, confirmed}]}
+    plan_confirmed: bool
+    
+    # Extraction results
+    file1_data: dict                # {gc_header: {...}, sov_lines: [...]}
+    file2_data: dict                # {sub_headers: [...], sub_sov_lines: [...]}
+    file3_data: dict                # {compliance_docs: [...]}
+    
+    # Verification
+    confidence_scores: dict         # {field_path: {score, evidence_page, bbox}}
+    fields_auto_approved: list[str]
+    fields_flagged: list[str]
+    fields_for_retry: list[str]
+    
+    # Retry tracking
+    retry_count: int
+    retry_budget_remaining: int     # tokens remaining in retry budget
+    
+    # Reconciliation
+    exceptions: list[dict]          # [{type, severity, description, evidence}]
+    reconciliation_result: dict
+    
+    # Human decisions
+    human_decisions: dict           # {field_path: {action, override_value, reason}}
+    
+    # Audit
+    agent_trace: list[dict]         # [{agent, action, timestamp, tokens_used, result}]
+    total_tokens: int
+    total_cost: float
+
+# Build the graph
+graph = StateGraph(PackageState)
+
+# Add nodes
+graph.add_node("ingest", ingest_documents)
+graph.add_node("classify", classify_documents)
+graph.add_node("confirm_classification", confirm_classification)
+graph.add_node("extract_file1", extract_file1)
+graph.add_node("generate_plan", generate_plan)
+graph.add_node("confirm_plan", confirm_plan)
+graph.add_node("extract_file2", extract_file2)
+graph.add_node("extract_file3", extract_file3)
+graph.add_node("verify", verify_extraction)
+graph.add_node("retry", retry_extraction)
+graph.add_node("reconcile", reconcile)
+graph.add_node("generate_exceptions", generate_exceptions)
+graph.add_node("human_review", human_review)
+graph.add_node("finalize", finalize_package)
+
+# Add edges
+graph.add_edge("ingest", "classify")
+graph.add_conditional_edges("classify", route_classification)
+graph.add_edge("confirm_classification", "extract_file1")
+graph.add_edge("extract_file1", "generate_plan")
+graph.add_conditional_edges("generate_plan", route_plan)
+graph.add_edge("confirm_plan", "extract_file2")
+graph.add_edge("extract_file2", "extract_file3")
+graph.add_edge("extract_file3", "verify")
+graph.add_conditional_edges("verify", route_by_confidence)
+graph.add_edge("retry", "verify")  # retry loops back
+graph.add_edge("reconcile", "generate_exceptions")
+graph.add_edge("generate_exceptions", "human_review")
+graph.add_edge("human_review", "finalize")
+graph.add_edge("finalize", END)
+
+# Compile with checkpointing
+checkpointer = PostgresSaver.from_conn_string(DATABASE_URL)
+app = graph.compile(checkpointer=checkpointer)</code></pre>
+        </div>
+
+        <!-- ============ SECTION: Migration Plan ============ -->
+        <h3>Migration Strategy: Current → LangGraph</h3>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>Component</th><th>Current</th><th>Target (LangGraph)</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Pipeline orchestrator</td><td>pipeline.js (Node.js, sequential)</td><td>LangGraph StateGraph (Python)</td><td style="color:var(--red)">Replace</td></tr>
+                    <tr><td>State management</td><td>Prisma ProcessingPipelineStep</td><td>LangGraph Checkpoint (Postgres)</td><td style="color:var(--red)">Replace</td></tr>
+                    <tr><td>Human gates</td><td>Custom confirm/resume logic</td><td>LangGraph interrupt() / resume()</td><td style="color:var(--red)">Replace</td></tr>
+                    <tr><td>G703 parser</td><td>extract_g703.py (pdfplumber)</td><td>Same file, wrapped as LangGraph Tool</td><td style="color:var(--green)">Keep + Wrap</td></tr>
+                    <tr><td>G702 parser</td><td>Inline Python in g702.js</td><td>Standalone Python Tool</td><td style="color:var(--yellow)">Refactor + Wrap</td></tr>
+                    <tr><td>Sub extraction</td><td>extract_subcontractors.py</td><td>LangGraph Agent Node with tools</td><td style="color:var(--yellow)">Refactor</td></tr>
+                    <tr><td>Reconciliation rules</td><td>lib/reconcile.js (Node.js)</td><td>Python node (same logic)</td><td style="color:var(--yellow)">Port to Python</td></tr>
+                    <tr><td>Subprocess spawning</td><td>Node.js → Python child_process</td><td>Eliminated (all Python)</td><td style="color:var(--green)">Remove</td></tr>
+                    <tr><td>API layer</td><td>Express.js (full backend)</td><td>Express.js (thin gateway) → calls LangGraph</td><td style="color:var(--yellow)">Thin down</td></tr>
+                    <tr><td>Frontend</td><td>React + Vite</td><td>Same (unchanged)</td><td style="color:var(--green)">Keep</td></tr>
+                    <tr><td>Database</td><td>Azure SQL + Prisma</td><td>Azure SQL + SQLAlchemy/Prisma</td><td style="color:var(--green)">Keep</td></tr>
+                    <tr><td>Verification agent</td><td>Does not exist</td><td>New LangGraph Agent Node</td><td style="color:var(--accent2)">Build New</td></tr>
+                    <tr><td>Retry agent</td><td>Does not exist</td><td>New LangGraph Node + conditional edge</td><td style="color:var(--accent2)">Build New</td></tr>
+                    <tr><td>Observability</td><td>Console.log</td><td>LangSmith traces + structured logging</td><td style="color:var(--accent2)">Build New</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ============ SECTION: System Architecture Layers ============ -->
+        <h3>Target System Architecture (Post-Migration)</h3>
+
+        <div class="arch-diagram">
+            <div class="arch-layer" style="border-color: var(--accent);">
+                <div class="arch-layer-label">FRONTEND (Unchanged)</div>
+                <div class="arch-row">
+                    <div class="arch-box box-ui">
+                        <div class="arch-box-icon">🖥️</div>
+                        <div class="arch-box-title">React + Vite</div>
+                        <div class="arch-box-desc">Dashboard • Upload • Review • Exception Management</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arch-connector">
+                <div class="arch-connector-line"></div>
+                <div class="arch-connector-label">REST API</div>
+            </div>
+
+            <div class="arch-layer" style="border-color: var(--text-muted);">
+                <div class="arch-layer-label">API GATEWAY (Node.js — Thinned)</div>
+                <div class="arch-row">
+                    <div class="arch-box box-api">
+                        <div class="arch-box-icon">⚡</div>
+                        <div class="arch-box-title">Express.js Gateway</div>
+                        <div class="arch-box-desc">Auth • File Upload → Blob • Trigger graph runs • Serve graph state to UI • Human confirmations → resume()</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arch-connector">
+                <div class="arch-connector-line"></div>
+                <div class="arch-connector-label">HTTP / invoke graph</div>
+            </div>
+
+            <div class="arch-layer" style="border-color: var(--accent2); background: rgba(139,92,246,0.05);">
+                <div class="arch-layer-label">LANGGRAPH RUNTIME (Python)</div>
+                <div class="arch-row">
+                    <div class="arch-box box-orchestrator" style="max-width:100%;flex:1;">
+                        <div class="arch-box-icon">🧠</div>
+                        <div class="arch-box-title">LangGraph StateGraph</div>
+                        <div class="arch-box-desc">
+                            Compiled graph with PostgreSQL checkpointing<br>
+                            Nodes: ingest → classify → extract → verify → retry → reconcile → review → finalize<br>
+                            Conditional edges route by confidence scores<br>
+                            interrupt() / resume() for human gates
+                        </div>
+                        <div class="arch-box-meta">
+                            <span class="meta-tag tag-new">LangGraph Framework</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="arch-row" style="margin-top:1rem;">
+                    <div class="arch-box" style="border-color:var(--accent2); min-width:140px;">
+                        <div class="arch-box-icon">🔀</div>
+                        <div class="arch-box-title">Conditional Routing</div>
+                        <div class="arch-box-desc">Confidence thresholds • File type routing • Retry budget checks</div>
+                    </div>
+                    <div class="arch-box" style="border-color:var(--accent2); min-width:140px;">
+                        <div class="arch-box-icon">💾</div>
+                        <div class="arch-box-title">Checkpointing</div>
+                        <div class="arch-box-desc">PostgreSQL • Resume from any node • Crash recovery</div>
+                    </div>
+                    <div class="arch-box" style="border-color:var(--accent2); min-width:140px;">
+                        <div class="arch-box-icon">⏸️</div>
+                        <div class="arch-box-title">Human-in-Loop</div>
+                        <div class="arch-box-desc">interrupt() • resume(value) • timeout escalation</div>
+                    </div>
+                    <div class="arch-box" style="border-color:var(--accent2); min-width:140px;">
+                        <div class="arch-box-icon">📊</div>
+                        <div class="arch-box-title">LangSmith Traces</div>
+                        <div class="arch-box-desc">Full observability • Token tracking • Latency metrics</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arch-connector">
+                <div class="arch-connector-line"></div>
+                <div class="arch-connector-label">Tools & Agents</div>
+            </div>
+
+            <div class="arch-layer" style="border-color: var(--green);">
+                <div class="arch-layer-label">TOOLS & DOMAIN LOGIC (Python)</div>
+                <div class="arch-row">
+                    <div class="arch-box" style="border-color:var(--green);">
+                        <div class="arch-box-icon">📐</div>
+                        <div class="arch-box-title">G703 Parser</div>
+                        <div class="arch-box-desc">pdfplumber + coordinates<br><em>Unchanged — wrapped as Tool</em></div>
+                        <div class="arch-box-meta"><span class="meta-tag tag-keep">KEPT</span></div>
+                    </div>
+                    <div class="arch-box" style="border-color:var(--green);">
+                        <div class="arch-box-icon">📋</div>
+                        <div class="arch-box-title">G702 Parser</div>
+                        <div class="arch-box-desc">pdfplumber + regex<br>+ LLM fallback</div>
+                        <div class="arch-box-meta"><span class="meta-tag tag-keep">KEPT</span><span class="meta-tag tag-enhanced">+FALLBACK</span></div>
+                    </div>
+                    <div class="arch-box" style="border-color:var(--accent);">
+                        <div class="arch-box-icon">🤖</div>
+                        <div class="arch-box-title">LLM Extractor</div>
+                        <div class="arch-box-desc">Scan pages • Extract packets<br>Structured output (JSON schema)</div>
+                        <div class="arch-box-meta"><span class="meta-tag tag-llm">LLM</span><span class="meta-tag tag-enhanced">ENHANCED</span></div>
+                    </div>
+                    <div class="arch-box" style="border-color:var(--green);">
+                        <div class="arch-box-icon">⚖️</div>
+                        <div class="arch-box-title">Reconciler</div>
+                        <div class="arch-box-desc">5 deterministic rules<br>Python port of reconcile.js</div>
+                        <div class="arch-box-meta"><span class="meta-tag tag-deterministic">DETERMINISTIC</span></div>
+                    </div>
+                    <div class="arch-box" style="border-color:var(--accent);">
+                        <div class="arch-box-icon">✅</div>
+                        <div class="arch-box-title">Verifier</div>
+                        <div class="arch-box-desc">Vision comparison<br>Field-level confidence</div>
+                        <div class="arch-box-meta"><span class="meta-tag tag-new">NEW</span><span class="meta-tag tag-llm">VISION</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arch-connector">
+                <div class="arch-connector-line"></div>
+            </div>
+
+            <div class="arch-layer" style="border-color: var(--orange);">
+                <div class="arch-layer-label">INFRASTRUCTURE</div>
+                <div class="arch-row">
+                    <div class="arch-box box-infra">
+                        <div class="arch-box-icon">📝</div>
+                        <div class="arch-box-title">Prompt Registry</div>
+                        <div class="arch-box-desc">Versioned • A/B testable</div>
+                    </div>
+                    <div class="arch-box box-infra">
+                        <div class="arch-box-icon">📐</div>
+                        <div class="arch-box-title">Output Schemas</div>
+                        <div class="arch-box-desc">Pydantic models per extraction</div>
+                    </div>
+                    <div class="arch-box box-infra">
+                        <div class="arch-box-icon">🧪</div>
+                        <div class="arch-box-title">Eval Harness</div>
+                        <div class="arch-box-desc">Golden PDFs • CI accuracy gate</div>
+                    </div>
+                    <div class="arch-box box-infra">
+                        <div class="arch-box-icon">💰</div>
+                        <div class="arch-box-title">Cost Controller</div>
+                        <div class="arch-box-desc">Per-package budget • Alerts</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arch-connector">
+                <div class="arch-connector-line"></div>
+            </div>
+
+            <div class="arch-layer" style="border-color: var(--red);">
+                <div class="arch-layer-label">DATA LAYER</div>
+                <div class="arch-row">
+                    <div class="arch-box box-data">
+                        <div class="arch-box-icon">🗄️</div>
+                        <div class="arch-box-title">Azure SQL</div>
+                        <div class="arch-box-desc">Packages • Extractions • Exceptions • Audit • Provenance</div>
+                    </div>
+                    <div class="arch-box box-data">
+                        <div class="arch-box-icon">☁️</div>
+                        <div class="arch-box-title">Azure Blob</div>
+                        <div class="arch-box-desc">PDFs • Page Images • OCR results</div>
+                    </div>
+                    <div class="arch-box box-data">
+                        <div class="arch-box-icon">🔍</div>
+                        <div class="arch-box-title">LangSmith</div>
+                        <div class="arch-box-desc">Traces • Token metrics • Latency</div>
+                    </div>
+                    <div class="arch-box box-data">
+                        <div class="arch-box-icon">💾</div>
+                        <div class="arch-box-title">LangGraph Checkpoint DB</div>
+                        <div class="arch-box-desc">PostgreSQL • Graph state snapshots</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arch-external">
+                <div class="arch-layer-label" style="color: var(--text-muted);">EXTERNAL SERVICES</div>
+                <div class="arch-row" style="margin-top:0.75rem;">
+                    <div class="ext-service"><span class="ext-icon">🤖</span><span>Azure OpenAI<br><small>gpt-4o / gpt-5.4</small></span></div>
+                    <div class="ext-service"><span class="ext-icon">👁️</span><span>Azure Doc Intelligence<br><small>OCR (prebuilt-layout)</small></span></div>
+                    <div class="ext-service"><span class="ext-icon">🔐</span><span>Azure Key Vault<br><small>Secrets</small></span></div>
+                    <div class="ext-service"><span class="ext-icon">📡</span><span>LangSmith<br><small>Observability SaaS</small></span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ SECTION: Why LangGraph ============ -->
+        <h3>Why LangGraph Over Other Frameworks</h3>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>Requirement</th><th>LangGraph</th><th>Semantic Kernel</th><th>Azure AI Foundry</th><th>Custom Code</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>State machine orchestration</td><td style="color:var(--green)">✅ Native</td><td>⚠️ Manual</td><td>❌ Not designed for this</td><td>⚠️ Build yourself</td></tr>
+                    <tr><td>Human-in-the-loop (interrupt/resume)</td><td style="color:var(--green)">✅ Native primitive</td><td>⚠️ Custom implementation</td><td>⚠️ Limited</td><td>⚠️ Build yourself</td></tr>
+                    <tr><td>Checkpointing / crash recovery</td><td style="color:var(--green)">✅ Built-in (Postgres)</td><td>❌ No</td><td>⚠️ Managed but opaque</td><td>⚠️ Build yourself</td></tr>
+                    <tr><td>Conditional routing</td><td style="color:var(--green)">✅ add_conditional_edges</td><td>⚠️ Plugin routing</td><td>❌ Fixed flows</td><td>⚠️ if/else</td></tr>
+                    <tr><td>Tool abstraction</td><td style="color:var(--green)">✅ @tool decorator</td><td style="color:var(--green)">✅ Plugins</td><td style="color:var(--green)">✅ Tools</td><td>⚠️ Manual</td></tr>
+                    <tr><td>Python-native (match existing code)</td><td style="color:var(--green)">✅ Python</td><td>⚠️ C# primary</td><td>⚠️ REST API</td><td style="color:var(--green)">✅</td></tr>
+                    <tr><td>Observability / traces</td><td style="color:var(--green)">✅ LangSmith native</td><td>⚠️ Custom telemetry</td><td>⚠️ Azure Monitor</td><td>❌ Build yourself</td></tr>
+                    <tr><td>Fan-out / parallel execution</td><td style="color:var(--green)">✅ Send API</td><td>❌ No</td><td>❌ No</td><td>⚠️ ThreadPool</td></tr>
+                    <tr><td>Production financial systems</td><td style="color:var(--green)">✅ Used in fintech</td><td style="color:var(--green)">✅ Enterprise</td><td>⚠️ Early stage</td><td style="color:var(--green)">✅</td></tr>
+                    <tr><td>Retry loops with budget caps</td><td style="color:var(--green)">✅ Conditional edges + state</td><td>⚠️ Custom</td><td>❌ No</td><td>⚠️ Custom</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ============ SECTION: Implementation Timeline ============ -->
+        <h3>Implementation Timeline (Revised)</h3>
+
+        <div class="timeline">
+            <div class="timeline-item">
+                <div class="timeline-phase" style="color:var(--accent)">Phase 1 — Weeks 1–3: Foundation</div>
+                <div class="timeline-title">Set up LangGraph project + eval harness</div>
+                <div class="timeline-desc">
+                    • Create Python project with LangGraph, pydantic, langgraph-checkpoint-postgres<br>
+                    • Define PackageState TypedDict<br>
+                    • Build basic graph: ingest → classify → extract_file1 → END<br>
+                    • Create golden test PDF set (20+ documents)<br>
+                    • Set up LangSmith workspace for tracing
+                </div>
+            </div>
+            <div class="timeline-item phase2">
+                <div class="timeline-phase" style="color:var(--accent2)">Phase 2 — Weeks 3–6: Core Migration</div>
+                <div class="timeline-title">Migrate File 1 + File 2 extraction to graph nodes</div>
+                <div class="timeline-desc">
+                    • Wrap G703 parser as LangGraph Tool<br>
+                    • Wrap G702 parser as Tool + add LLM fallback<br>
+                    • Convert extract_subcontractors.py to LangGraph agent node<br>
+                    • Add plan generation + confirm_plan interrupt<br>
+                    • Add classification cascade (heuristic → LLM → vision)<br>
+                    • Wire Express.js gateway to invoke graph + handle resume()
+                </div>
+            </div>
+            <div class="timeline-item phase2">
+                <div class="timeline-phase" style="color:var(--accent2)">Phase 3 — Weeks 6–9: New Agents</div>
+                <div class="timeline-title">Build Verification + Retry + File 3</div>
+                <div class="timeline-desc">
+                    • Build verify_extraction agent node (vision comparison)<br>
+                    • Add confidence-based conditional routing<br>
+                    • Build retry_extraction with alternative strategies<br>
+                    • Implement cost budget tracking in state<br>
+                    • Build File 3 extraction for compliance docs<br>
+                    • Port reconciliation rules to Python node
+                </div>
+            </div>
+            <div class="timeline-item phase3">
+                <div class="timeline-phase" style="color:var(--green)">Phase 4 — Weeks 9–12: Production Hardening</div>
+                <div class="timeline-title">Test, tune, deploy</div>
+                <div class="timeline-desc">
+                    • Run full eval suite — measure accuracy improvement<br>
+                    • Tune confidence thresholds on real data<br>
+                    • Load test with concurrent packages<br>
+                    • Remove legacy pipeline.js + subprocess code<br>
+                    • Deploy to Azure (Container Apps + PostgreSQL)<br>
+                    • Monitor via LangSmith for 2 weeks before going live
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ SECTION: MOCK UI ============ -->
+        <h2>End-to-End User Experience — Mock UI</h2>
+        <p style="color:var(--text-muted); margin-bottom:1.5rem; font-size:0.9rem;">Interactive walkthrough showing how the user interacts with the system from upload through final approval, and how agents work behind the scenes.</p>
+
+        <!-- Mock UI Container -->
+        <div class="mock-ui-container">
+            <!-- Navigation Tabs -->
+            <div class="mock-nav">
+                <button class="mock-tab active" onclick="showScreen('upload')">1. Upload</button>
+                <button class="mock-tab" onclick="showScreen('classify')">2. Classification</button>
+                <button class="mock-tab" onclick="showScreen('extraction')">3. Extraction</button>
+                <button class="mock-tab" onclick="showScreen('verification')">4. Verification</button>
+                <button class="mock-tab" onclick="showScreen('reconciliation')">5. Reconciliation</button>
+                <button class="mock-tab" onclick="showScreen('review')">6. Review</button>
+                <button class="mock-tab" onclick="showScreen('complete')">7. Complete</button>
+            </div>
+
+            <!-- Screen 1: Upload -->
+            <div class="mock-screen" id="screen-upload">
+                <div class="mock-header">
+                    <div class="mock-breadcrumb">Projects / Highway I-95 Expansion / Pay App #12</div>
+                    <h3 class="mock-title">Upload Payment Application Package</h3>
+                </div>
+                <div class="mock-body">
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="upload-icon">📁</div>
+                        <div class="upload-text">Drag & Drop PDF files here</div>
+                        <div class="upload-subtext">or click to browse</div>
+                        <div class="upload-formats">Accepted: PDF files up to 100MB</div>
+                    </div>
+                    <div class="uploaded-files">
+                        <div class="file-item">
+                            <span class="file-icon">📄</span>
+                            <div class="file-info">
+                                <div class="file-name">GC_Pay_Application_12.pdf</div>
+                                <div class="file-size">4.2 MB • 28 pages</div>
+                            </div>
+                            <span class="file-status status-success">✓ Uploaded</span>
+                        </div>
+                        <div class="file-item">
+                            <span class="file-icon">📄</span>
+                            <div class="file-info">
+                                <div class="file-name">Subcontractors_Pay_App_12.pdf</div>
+                                <div class="file-size">12.8 MB • 94 pages</div>
+                            </div>
+                            <span class="file-status status-success">✓ Uploaded</span>
+                        </div>
+                        <div class="file-item">
+                            <span class="file-icon">📄</span>
+                            <div class="file-info">
+                                <div class="file-name">Supporting_Docs_Lien_Waivers.pdf</div>
+                                <div class="file-size">3.1 MB • 15 pages</div>
+                            </div>
+                            <span class="file-status status-success">✓ Uploaded</span>
+                        </div>
+                    </div>
+                    <div class="mock-actions">
+                        <button class="btn-primary" onclick="showScreen('classify')">Start Processing →</button>
+                    </div>
+                </div>
+                <!-- Agent Activity Panel -->
+                <div class="agent-panel">
+                    <div class="agent-panel-header">🤖 Agent Activity</div>
+                    <div class="agent-log">
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-ingest">INGEST</span>
+                            <span>Files uploaded to Azure Blob Storage</span>
+                            <span class="agent-time">0.8s</span>
+                        </div>
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-ingest">INGEST</span>
+                            <span>Page images generated (137 pages total)</span>
+                            <span class="agent-time">3.2s</span>
+                        </div>
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-ingest">INGEST</span>
+                            <span>Metadata stored in database</span>
+                            <span class="agent-time">0.3s</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Screen 2: Classification -->
+            <div class="mock-screen hidden" id="screen-classify">
+                <div class="mock-header">
+                    <div class="mock-breadcrumb">Projects / Highway I-95 / Pay App #12 / Classification</div>
+                    <h3 class="mock-title">Document Classification</h3>
+                    <div class="mock-subtitle">Classification Agent analyzed your documents using 3-tier cascade</div>
+                </div>
+                <div class="mock-body">
+                    <div class="classify-results">
+                        <div class="classify-card">
+                            <div class="classify-file">GC_Pay_Application_12.pdf</div>
+                            <div class="classify-result">
+                                <span class="classify-type type-file1">File 1 — GC Pay Application</span>
+                                <span class="confidence-pill conf-high">97% confidence</span>
+                            </div>
+                            <div class="classify-method">Method: Heuristic (keywords: "G702", "G703", "Application for Payment")</div>
+                            <div class="classify-auto">✓ Auto-confirmed (confidence ≥ 90%)</div>
+                        </div>
+                        <div class="classify-card">
+                            <div class="classify-file">Subcontractors_Pay_App_12.pdf</div>
+                            <div class="classify-result">
+                                <span class="classify-type type-file2">File 2 — Subcontractor Applications</span>
+                                <span class="confidence-pill conf-high">94% confidence</span>
+                            </div>
+                            <div class="classify-method">Method: Heuristic (keywords: "subcontractor", multiple G702 forms detected)</div>
+                            <div class="classify-auto">✓ Auto-confirmed (confidence ≥ 90%)</div>
+                        </div>
+                        <div class="classify-card classify-needs-review">
+                            <div class="classify-file">Supporting_Docs_Lien_Waivers.pdf</div>
+                            <div class="classify-result">
+                                <span class="classify-type type-file3">File 3 — Supporting Documents</span>
+                                <span class="confidence-pill conf-med">72% confidence</span>
+                            </div>
+                            <div class="classify-method">Method: LLM Classifier (heuristic was uncertain → escalated to Tier 2)</div>
+                            <div class="classify-action">
+                                <span class="needs-confirm">⚠️ Needs your confirmation</span>
+                                <select class="classify-select">
+                                    <option selected>File 3 — Supporting Documents</option>
+                                    <option>File 2 — Subcontractor Applications</option>
+                                    <option>File 1 — GC Pay Application</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mock-actions">
+                        <button class="btn-secondary">← Back</button>
+                        <button class="btn-primary" onclick="showScreen('extraction')">Confirm Classification →</button>
+                    </div>
+                </div>
+                <div class="agent-panel">
+                    <div class="agent-panel-header">🤖 Agent Activity</div>
+                    <div class="agent-log">
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-classify">CLASSIFY</span>
+                            <span>Tier 1 (Heuristic): GC_Pay_Application_12.pdf → File 1 (97%)</span>
+                            <span class="agent-time">0.1s</span>
+                        </div>
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-classify">CLASSIFY</span>
+                            <span>Tier 1 (Heuristic): Subcontractors_Pay_App_12.pdf → File 2 (94%)</span>
+                            <span class="agent-time">0.1s</span>
+                        </div>
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-classify">CLASSIFY</span>
+                            <span>Tier 1 (Heuristic): Supporting_Docs → uncertain (48%)</span>
+                            <span class="agent-time">0.1s</span>
+                        </div>
+                        <div class="agent-log-item agent-log-escalation">
+                            <span class="agent-badge badge-classify">CLASSIFY</span>
+                            <span>⬆️ Escalated to Tier 2 (LLM): Supporting_Docs → File 3 (72%)</span>
+                            <span class="agent-time">1.4s</span>
+                        </div>
+                        <div class="agent-log-item agent-log-interrupt">
+                            <span class="agent-badge badge-human">INTERRUPT</span>
+                            <span>⏸️ Confidence &lt; 90% — waiting for human confirmation</span>
+                            <span class="agent-time">—</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Screen 3: Extraction -->
+            <div class="mock-screen hidden" id="screen-extraction">
+                <div class="mock-header">
+                    <div class="mock-breadcrumb">Projects / Highway I-95 / Pay App #12 / Extraction</div>
+                    <h3 class="mock-title">Data Extraction In Progress</h3>
+                    <div class="mock-subtitle">Multiple agents are extracting structured data from your documents</div>
+                </div>
+                <div class="mock-body">
+                    <!-- Extraction progress cards -->
+                    <div class="extract-progress-grid">
+                        <div class="extract-card extract-done">
+                            <div class="extract-card-header">
+                                <span class="extract-card-icon">📐</span>
+                                <span class="extract-card-title">File 1: G703 Lines</span>
+                                <span class="extract-card-status status-done">✓ Complete</span>
+                            </div>
+                            <div class="extract-card-body">
+                                <div class="extract-stat"><strong>42</strong> SOV line items extracted</div>
+                                <div class="extract-stat"><strong>0.8s</strong> processing time</div>
+                                <div class="extract-method">Method: Deterministic (pdfplumber coordinates)</div>
+                            </div>
+                        </div>
+                        <div class="extract-card extract-done">
+                            <div class="extract-card-header">
+                                <span class="extract-card-icon">📋</span>
+                                <span class="extract-card-title">File 1: G702 Header</span>
+                                <span class="extract-card-status status-done">✓ Complete</span>
+                            </div>
+                            <div class="extract-card-body">
+                                <div class="extract-stat"><strong>18</strong> fields extracted</div>
+                                <div class="extract-stat"><strong>0.3s</strong> processing time</div>
+                                <div class="extract-method">Method: Regex + pdfplumber</div>
+                            </div>
+                        </div>
+                        <div class="extract-card extract-running">
+                            <div class="extract-card-header">
+                                <span class="extract-card-icon">🤖</span>
+                                <span class="extract-card-title">File 2: Subcontractors</span>
+                                <span class="extract-card-status status-running">⟳ Processing</span>
+                            </div>
+                            <div class="extract-card-body">
+                                <div class="extract-progress-bar">
+                                    <div class="extract-progress-fill" style="width:65%"></div>
+                                </div>
+                                <div class="extract-stat">OCR: ✓ Complete (94 pages)</div>
+                                <div class="extract-stat">Page Scan: ✓ 94/94 pages classified</div>
+                                <div class="extract-stat">Extraction: 8/12 subcontractors done</div>
+                                <div class="extract-method">Method: Azure OCR + LLM Agent</div>
+                            </div>
+                            <div class="extract-sub-list">
+                                <div class="sub-item sub-done">✓ ABC Electrical — 8 pages, 12 lines</div>
+                                <div class="sub-item sub-done">✓ Metro Plumbing — 6 pages, 8 lines</div>
+                                <div class="sub-item sub-done">✓ Summit HVAC — 10 pages, 15 lines</div>
+                                <div class="sub-item sub-done">✓ Valley Steel — 5 pages, 6 lines</div>
+                                <div class="sub-item sub-done">✓ Pacific Concrete — 7 pages, 9 lines</div>
+                                <div class="sub-item sub-done">✓ Coastal Roofing — 4 pages, 5 lines</div>
+                                <div class="sub-item sub-done">✓ River Masonry — 6 pages, 7 lines</div>
+                                <div class="sub-item sub-done">✓ Peak Drywall — 5 pages, 8 lines</div>
+                                <div class="sub-item sub-running">⟳ Desert Landscaping — processing...</div>
+                                <div class="sub-item sub-waiting">○ Crown Painting</div>
+                                <div class="sub-item sub-waiting">○ Atlas Fire Protection</div>
+                                <div class="sub-item sub-waiting">○ Horizon Elevators</div>
+                            </div>
+                        </div>
+                        <div class="extract-card extract-waiting">
+                            <div class="extract-card-header">
+                                <span class="extract-card-icon">📎</span>
+                                <span class="extract-card-title">File 3: Supporting Docs</span>
+                                <span class="extract-card-status status-waiting">○ Waiting</span>
+                            </div>
+                            <div class="extract-card-body">
+                                <div class="extract-stat">Queued — starts after File 2 completes</div>
+                                <div class="extract-method">Method: LLM compliance extraction</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mock-actions">
+                        <button class="btn-primary" onclick="showScreen('verification')">Continue (demo) →</button>
+                    </div>
+                </div>
+                <div class="agent-panel">
+                    <div class="agent-panel-header">🤖 Agent Activity — Live</div>
+                    <div class="agent-log">
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-extract">EXTRACT</span>
+                            <span>File 1 G703: 42 lines via coordinate parser</span>
+                            <span class="agent-time">0.8s</span>
+                        </div>
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-extract">EXTRACT</span>
+                            <span>File 1 G702: 18 fields via regex</span>
+                            <span class="agent-time">0.3s</span>
+                        </div>
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-extract">OCR</span>
+                            <span>File 2: Azure Doc Intelligence — 94 pages processed</span>
+                            <span class="agent-time">12.4s</span>
+                        </div>
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-extract">SCAN</span>
+                            <span>Page Scan Agent: classified 94 pages (G702: 12, G703: 24, Supporting: 58)</span>
+                            <span class="agent-time">8.2s</span>
+                        </div>
+                        <div class="agent-log-item agent-log-running">
+                            <span class="agent-badge badge-extract">EXTRACT</span>
+                            <span>Packet extraction: 8/12 subcontractors complete (tokens: 32,400)</span>
+                            <span class="agent-time">45s</span>
+                        </div>
+                    </div>
+                    <div class="agent-cost-tracker">
+                        <div class="cost-item"><span>Tokens used:</span><span class="cost-value">38,200</span></div>
+                        <div class="cost-item"><span>Est. cost:</span><span class="cost-value">$0.12</span></div>
+                        <div class="cost-item"><span>Budget remaining:</span><span class="cost-value">$0.88</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Screen 4: Verification -->
+            <div class="mock-screen hidden" id="screen-verification">
+                <div class="mock-header">
+                    <div class="mock-breadcrumb">Projects / Highway I-95 / Pay App #12 / Verification</div>
+                    <h3 class="mock-title">AI Verification Results</h3>
+                    <div class="mock-subtitle">Verification Agent compared extracted data against source documents</div>
+                </div>
+                <div class="mock-body">
+                    <!-- Verification summary -->
+                    <div class="verify-summary">
+                        <div class="verify-stat-card verify-auto">
+                            <div class="verify-stat-num">847</div>
+                            <div class="verify-stat-label">Fields Auto-Approved</div>
+                            <div class="verify-stat-pct">72% of total</div>
+                        </div>
+                        <div class="verify-stat-card verify-spot">
+                            <div class="verify-stat-num">248</div>
+                            <div class="verify-stat-label">Fields for Spot-Check</div>
+                            <div class="verify-stat-pct">21% of total</div>
+                        </div>
+                        <div class="verify-stat-card verify-retry-stat">
+                            <div class="verify-stat-num">38</div>
+                            <div class="verify-stat-label">Fields Retried</div>
+                            <div class="verify-stat-pct">3% of total</div>
+                        </div>
+                        <div class="verify-stat-card verify-escalated">
+                            <div class="verify-stat-num">42</div>
+                            <div class="verify-stat-label">Escalated to Human</div>
+                            <div class="verify-stat-pct">4% of total</div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed verification per sub -->
+                    <h4 style="margin:1.5rem 0 0.75rem; color:var(--text);">Verification Detail by Subcontractor</h4>
+                    <div class="verify-table-wrap">
+                        <table class="verify-table">
+                            <thead>
+                                <tr>
+                                    <th>Subcontractor</th>
+                                    <th>Fields</th>
+                                    <th>Auto ✓</th>
+                                    <th>Spot-Check</th>
+                                    <th>Retried</th>
+                                    <th>Human</th>
+                                    <th>Avg Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>ABC Electrical</td><td>96</td>
+                                    <td class="td-green">82</td><td class="td-yellow">11</td><td class="td-orange">2</td><td class="td-red">1</td>
+                                    <td><div class="conf-bar"><div class="conf-fill" style="width:91%"></div></div><span>0.91</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Metro Plumbing</td><td>64</td>
+                                    <td class="td-green">55</td><td class="td-yellow">7</td><td class="td-orange">1</td><td class="td-red">1</td>
+                                    <td><div class="conf-bar"><div class="conf-fill" style="width:89%"></div></div><span>0.89</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Summit HVAC</td><td>120</td>
+                                    <td class="td-green">98</td><td class="td-yellow">15</td><td class="td-orange">4</td><td class="td-red">3</td>
+                                    <td><div class="conf-bar"><div class="conf-fill" style="width:87%"></div></div><span>0.87</span></td>
+                                </tr>
+                                <tr class="verify-row-problem">
+                                    <td>Desert Landscaping</td><td>72</td>
+                                    <td class="td-green">34</td><td class="td-yellow">22</td><td class="td-orange">9</td><td class="td-red">7</td>
+                                    <td><div class="conf-bar conf-low"><div class="conf-fill" style="width:62%"></div></div><span>0.62</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Valley Steel</td><td>48</td>
+                                    <td class="td-green">41</td><td class="td-yellow">5</td><td class="td-orange">1</td><td class="td-red">1</td>
+                                    <td><div class="conf-bar"><div class="conf-fill" style="width:93%"></div></div><span>0.93</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Retry results -->
+                    <div class="retry-results">
+                        <h4 style="margin:1.5rem 0 0.75rem; color:var(--text);">🔄 Retry Agent Results</h4>
+                        <div class="retry-item">
+                            <div class="retry-header">
+                                <span class="retry-sub">Desert Landscaping — "Total Completed to Date"</span>
+                                <span class="retry-outcome retry-improved">✓ Improved</span>
+                            </div>
+                            <div class="retry-detail">
+                                <div class="retry-attempt">
+                                    <span class="retry-label">Attempt 1 (default prompt):</span>
+                                    <span class="retry-score">0.38</span>
+                                </div>
+                                <div class="retry-attempt">
+                                    <span class="retry-label">Attempt 2 (page-by-page):</span>
+                                    <span class="retry-score retry-score-better">0.82</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="retry-item">
+                            <div class="retry-header">
+                                <span class="retry-sub">Desert Landscaping — "Retainage Amount"</span>
+                                <span class="retry-outcome retry-escalated">↑ Escalated</span>
+                            </div>
+                            <div class="retry-detail">
+                                <div class="retry-attempt">
+                                    <span class="retry-label">Attempt 1 (default):</span>
+                                    <span class="retry-score">0.29</span>
+                                </div>
+                                <div class="retry-attempt">
+                                    <span class="retry-label">Attempt 2 (vision):</span>
+                                    <span class="retry-score">0.41</span>
+                                </div>
+                                <div class="retry-escalate">Max retries reached → sent to human review</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mock-actions">
+                        <button class="btn-primary" onclick="showScreen('reconciliation')">Continue to Reconciliation →</button>
+                    </div>
+                </div>
+                <div class="agent-panel">
+                    <div class="agent-panel-header">🤖 Agent Activity</div>
+                    <div class="agent-log">
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-verify">VERIFY</span>
+                            <span>Vision comparison: 1,175 fields across 12 subcontractors</span>
+                            <span class="agent-time">28s</span>
+                        </div>
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-verify">VERIFY</span>
+                            <span>Auto-approved 847 fields (confidence ≥ 0.85)</span>
+                            <span class="agent-time">—</span>
+                        </div>
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-verify">VERIFY</span>
+                            <span>Flagged 248 fields for spot-check (0.50–0.84)</span>
+                            <span class="agent-time">—</span>
+                        </div>
+                        <div class="agent-log-item agent-log-escalation">
+                            <span class="agent-badge badge-retry">RETRY</span>
+                            <span>38 fields sent to Retry Agent</span>
+                            <span class="agent-time">—</span>
+                        </div>
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-retry">RETRY</span>
+                            <span>26/38 fields improved above threshold after retry</span>
+                            <span class="agent-time">14s</span>
+                        </div>
+                        <div class="agent-log-item agent-log-interrupt">
+                            <span class="agent-badge badge-human">ESCALATE</span>
+                            <span>12 fields + 30 spot-checks → human review queue</span>
+                            <span class="agent-time">—</span>
+                        </div>
+                    </div>
+                    <div class="agent-cost-tracker">
+                        <div class="cost-item"><span>Verification tokens:</span><span class="cost-value">18,400</span></div>
+                        <div class="cost-item"><span>Retry tokens:</span><span class="cost-value">6,200</span></div>
+                        <div class="cost-item"><span>Total package cost:</span><span class="cost-value">$0.34</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Screen 5: Reconciliation -->
+            <div class="mock-screen hidden" id="screen-reconciliation">
+                <div class="mock-header">
+                    <div class="mock-breadcrumb">Projects / Highway I-95 / Pay App #12 / Reconciliation</div>
+                    <h3 class="mock-title">Reconciliation Results</h3>
+                    <div class="mock-subtitle">Deterministic rule engine compared GC totals against subcontractor submissions</div>
+                </div>
+                <div class="mock-body">
+                    <div class="recon-summary">
+                        <div class="recon-stat passed">
+                            <div class="recon-num">9</div>
+                            <div class="recon-label">Subs Passed</div>
+                        </div>
+                        <div class="recon-stat warnings">
+                            <div class="recon-num">2</div>
+                            <div class="recon-label">Warnings</div>
+                        </div>
+                        <div class="recon-stat exceptions">
+                            <div class="recon-num">3</div>
+                            <div class="recon-label">Exceptions</div>
+                        </div>
+                    </div>
+
+                    <div class="exception-list">
+                        <div class="exception-item exception-high">
+                            <div class="exception-header">
+                                <span class="exception-type">CROSS_FILE_MISMATCH</span>
+                                <span class="exception-severity sev-high">High</span>
+                            </div>
+                            <div class="exception-body">
+                                <strong>Summit HVAC:</strong> GC Application shows $284,500 but Sub Application total is $291,200
+                                <div class="exception-delta">Δ $6,700 (2.4%)</div>
+                            </div>
+                            <div class="exception-evidence">
+                                <span class="evidence-link">📄 GC G703 Line 14</span>
+                                <span class="evidence-link">📄 Sub G702 Page 3</span>
+                            </div>
+                        </div>
+                        <div class="exception-item exception-med">
+                            <div class="exception-header">
+                                <span class="exception-type">RETAINAGE_DEVIATION</span>
+                                <span class="exception-severity sev-med">Medium</span>
+                            </div>
+                            <div class="exception-body">
+                                <strong>Desert Landscaping:</strong> Retainage calculated at 8.2% vs contract standard of 5%
+                                <div class="exception-delta">Δ 3.2% above standard</div>
+                            </div>
+                            <div class="exception-evidence">
+                                <span class="evidence-link">📄 Sub G702 Page 7</span>
+                            </div>
+                        </div>
+                        <div class="exception-item exception-med">
+                            <div class="exception-header">
+                                <span class="exception-type">MATH_ERROR</span>
+                                <span class="exception-severity sev-med">Medium</span>
+                            </div>
+                            <div class="exception-body">
+                                <strong>Crown Painting:</strong> "Work Completed This Period" + "Previously Completed" ≠ "Total Completed to Date"
+                                <div class="exception-delta">$12,450 + $89,200 ≠ $102,150 (expected: $101,650)</div>
+                            </div>
+                            <div class="exception-evidence">
+                                <span class="evidence-link">📄 Sub G703 Lines 1-4</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mock-actions">
+                        <button class="btn-primary" onclick="showScreen('review')">Proceed to Review →</button>
+                    </div>
+                </div>
+                <div class="agent-panel">
+                    <div class="agent-panel-header">🤖 Agent Activity</div>
+                    <div class="agent-log">
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-recon">RECONCILE</span>
+                            <span>Rule 1 (Cross-file mismatch): 1 exception found</span>
+                            <span class="agent-time">0.2s</span>
+                        </div>
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-recon">RECONCILE</span>
+                            <span>Rule 2 (Math errors): 1 exception found</span>
+                            <span class="agent-time">0.1s</span>
+                        </div>
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-recon">RECONCILE</span>
+                            <span>Rule 3 (Retainage deviation): 1 exception found</span>
+                            <span class="agent-time">0.1s</span>
+                        </div>
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-recon">RECONCILE</span>
+                            <span>Rule 4 (Period continuity): ✓ All passed</span>
+                            <span class="agent-time">0.1s</span>
+                        </div>
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-recon">RECONCILE</span>
+                            <span>Rule 5 (Missing docs): ✓ All lien waivers present</span>
+                            <span class="agent-time">0.1s</span>
+                        </div>
+                    </div>
+                    <div class="agent-cost-tracker">
+                        <div class="cost-item"><span>LLM tokens:</span><span class="cost-value">0 (deterministic)</span></div>
+                        <div class="cost-item"><span>Processing time:</span><span class="cost-value">0.6s</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Screen 6: Human Review -->
+            <div class="mock-screen hidden" id="screen-review">
+                <div class="mock-header">
+                    <div class="mock-breadcrumb">Projects / Highway I-95 / Pay App #12 / Review</div>
+                    <h3 class="mock-title">Human Review</h3>
+                    <div class="mock-subtitle">Only showing items that need your attention — 42 fields + 3 exceptions (not all 1,175 fields)</div>
+                </div>
+                <div class="mock-body">
+                    <div class="review-tabs">
+                        <span class="review-tab active">Exceptions (3)</span>
+                        <span class="review-tab">Low-Confidence Fields (42)</span>
+                        <span class="review-tab">Spot-Checks (30)</span>
+                    </div>
+
+                    <!-- Review items -->
+                    <div class="review-item">
+                        <div class="review-left">
+                            <div class="review-field-name">Summit HVAC — Total Application Amount</div>
+                            <div class="review-context">
+                                <span class="review-extracted">Extracted: <strong>$291,200</strong></span>
+                                <span class="review-expected">GC Shows: <strong>$284,500</strong></span>
+                                <span class="review-confidence">Confidence: <strong>0.92</strong></span>
+                            </div>
+                            <div class="review-source">
+                                <div class="review-source-img">
+                                    <div class="source-placeholder">
+                                        <div class="source-highlight">$291,200.00</div>
+                                        <div class="source-text">Page 3 of Sub Application — highlighted region</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="review-right">
+                            <div class="review-actions-group">
+                                <button class="review-btn review-accept">✓ Accept Sub Value ($291,200)</button>
+                                <button class="review-btn review-override">Override with GC Value ($284,500)</button>
+                                <button class="review-btn review-flag">Flag for Follow-up</button>
+                            </div>
+                            <div class="review-reason">
+                                <textarea placeholder="Reason for decision (required for override)..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="review-item">
+                        <div class="review-left">
+                            <div class="review-field-name">Desert Landscaping — Retainage Amount</div>
+                            <div class="review-context">
+                                <span class="review-extracted">Extracted: <strong>$18,400</strong></span>
+                                <span class="review-confidence">Confidence: <strong>0.41</strong> (after 2 retries)</span>
+                            </div>
+                            <div class="review-source">
+                                <div class="source-placeholder source-blurry">
+                                    <div class="source-text">⚠️ Source image quality is poor — scanned at low resolution</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="review-right">
+                            <div class="review-actions-group">
+                                <button class="review-btn review-accept">✓ Accept ($18,400)</button>
+                                <button class="review-btn review-override">Enter Manual Value</button>
+                                <button class="review-btn review-flag">Flag — Request Rescan</button>
+                            </div>
+                            <div class="review-reason">
+                                <textarea placeholder="Enter correct value or reason..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="review-progress">
+                        <div class="review-progress-text">Reviewed: 2 of 42 items</div>
+                        <div class="review-progress-bar"><div class="review-progress-fill" style="width:5%"></div></div>
+                    </div>
+
+                    <div class="mock-actions">
+                        <button class="btn-secondary">Save Progress</button>
+                        <button class="btn-primary" onclick="showScreen('complete')">Submit All Decisions →</button>
+                    </div>
+                </div>
+                <div class="agent-panel">
+                    <div class="agent-panel-header">🤖 Agent Status</div>
+                    <div class="agent-log">
+                        <div class="agent-log-item agent-log-interrupt">
+                            <span class="agent-badge badge-human">PAUSED</span>
+                            <span>⏸️ Graph interrupted — awaiting human decisions on 42 fields + 3 exceptions</span>
+                            <span class="agent-time">—</span>
+                        </div>
+                        <div class="agent-log-item">
+                            <span class="agent-badge badge-human">INFO</span>
+                            <span>Checkpoint saved — can resume anytime. No data will be lost.</span>
+                            <span class="agent-time">—</span>
+                        </div>
+                    </div>
+                    <div class="agent-savings">
+                        <div class="savings-title">Human Review Reduction</div>
+                        <div class="savings-comparison">
+                            <div class="savings-old">Without agents: review <strong>1,175</strong> fields</div>
+                            <div class="savings-new">With agents: review <strong>42</strong> fields (96% reduction)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Screen 7: Complete -->
+            <div class="mock-screen hidden" id="screen-complete">
+                <div class="mock-header">
+                    <div class="mock-breadcrumb">Projects / Highway I-95 / Pay App #12 / Complete</div>
+                    <h3 class="mock-title">✓ Package Approved</h3>
+                </div>
+                <div class="mock-body">
+                    <div class="complete-summary">
+                        <div class="complete-icon">✅</div>
+                        <div class="complete-text">Pay Application #12 has been processed and approved</div>
+                    </div>
+
+                    <div class="complete-stats">
+                        <div class="complete-stat-card">
+                            <div class="complete-stat-label">Total Processing Time</div>
+                            <div class="complete-stat-value">4 min 12 sec</div>
+                            <div class="complete-stat-note">(excludes human review wait)</div>
+                        </div>
+                        <div class="complete-stat-card">
+                            <div class="complete-stat-label">LLM Cost</div>
+                            <div class="complete-stat-value">$0.38</div>
+                            <div class="complete-stat-note">62,800 tokens total</div>
+                        </div>
+                        <div class="complete-stat-card">
+                            <div class="complete-stat-label">Human Review Items</div>
+                            <div class="complete-stat-value">42 / 1,175</div>
+                            <div class="complete-stat-note">96% auto-handled by agents</div>
+                        </div>
+                        <div class="complete-stat-card">
+                            <div class="complete-stat-label">Exceptions Found</div>
+                            <div class="complete-stat-value">3</div>
+                            <div class="complete-stat-note">1 high, 2 medium severity</div>
+                        </div>
+                    </div>
+
+                    <div class="complete-output">
+                        <h4>Output Summary</h4>
+                        <div class="output-grid">
+                            <div class="output-item">
+                                <span class="output-icon">📊</span>
+                                <div>
+                                    <div class="output-title">GC Header Data</div>
+                                    <div class="output-desc">18 fields • Contract #, Owner, Architect, Period dates, Amounts</div>
+                                </div>
+                            </div>
+                            <div class="output-item">
+                                <span class="output-icon">📋</span>
+                                <div>
+                                    <div class="output-title">GC SOV Lines</div>
+                                    <div class="output-desc">42 line items with descriptions, scheduled values, completed amounts</div>
+                                </div>
+                            </div>
+                            <div class="output-item">
+                                <span class="output-icon">👷</span>
+                                <div>
+                                    <div class="output-title">Subcontractor Headers</div>
+                                    <div class="output-desc">12 sub applications with contract amounts, retainage, net due</div>
+                                </div>
+                            </div>
+                            <div class="output-item">
+                                <span class="output-icon">📐</span>
+                                <div>
+                                    <div class="output-title">Subcontractor SOV Lines</div>
+                                    <div class="output-desc">156 line items across 12 subcontractors</div>
+                                </div>
+                            </div>
+                            <div class="output-item">
+                                <span class="output-icon">⚠️</span>
+                                <div>
+                                    <div class="output-title">Exceptions & Reconciliation</div>
+                                    <div class="output-desc">3 exceptions (resolved) • 5 reconciliation rules passed</div>
+                                </div>
+                            </div>
+                            <div class="output-item">
+                                <span class="output-icon">📎</span>
+                                <div>
+                                    <div class="output-title">Supporting Doc Compliance</div>
+                                    <div class="output-desc">12 lien waivers verified • 8 COIs valid • 0 expired</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="complete-audit">
+                        <h4>Audit Trail</h4>
+                        <div class="audit-entries">
+                            <div class="audit-entry"><span class="audit-time">10:42:01</span><span>Package uploaded by user@aic.com</span></div>
+                            <div class="audit-entry"><span class="audit-time">10:42:02</span><span>Classification Agent: 3 documents classified</span></div>
+                            <div class="audit-entry"><span class="audit-time">10:42:14</span><span>Human confirmed classification (1 manual override)</span></div>
+                            <div class="audit-entry"><span class="audit-time">10:42:15</span><span>File 1 extraction complete (deterministic)</span></div>
+                            <div class="audit-entry"><span class="audit-time">10:42:16</span><span>Plan generated: 12 subcontractors identified</span></div>
+                            <div class="audit-entry"><span class="audit-time">10:42:22</span><span>Human confirmed extraction plan</span></div>
+                            <div class="audit-entry"><span class="audit-time">10:43:08</span><span>File 2 extraction complete (12 subs, 156 SOV lines)</span></div>
+                            <div class="audit-entry"><span class="audit-time">10:43:18</span><span>File 3 extraction complete (12 lien waivers, 8 COIs)</span></div>
+                            <div class="audit-entry"><span class="audit-time">10:43:46</span><span>Verification Agent: 847 auto-approved, 42 escalated</span></div>
+                            <div class="audit-entry"><span class="audit-time">10:44:00</span><span>Retry Agent: 26/38 fields improved</span></div>
+                            <div class="audit-entry"><span class="audit-time">10:44:01</span><span>Reconciliation: 3 exceptions generated</span></div>
+                            <div class="audit-entry"><span class="audit-time">11:15:33</span><span>Human reviewed 42 fields + 3 exceptions</span></div>
+                            <div class="audit-entry"><span class="audit-time">11:15:34</span><span>Package finalized and approved</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <p style="text-align:center; color:var(--text-muted); margin-top:3rem; font-size:0.85rem;">
+            Assessment prepared July 2026 — AIC Construction Payment Platform — Revised: LangGraph Architecture
+        </p>
+    </div>
+
+    <script>
+        function showScreen(screen) {
+            document.querySelectorAll('.mock-screen').forEach(s => s.classList.add('hidden'));
+            document.getElementById('screen-' + screen).classList.remove('hidden');
+            document.querySelectorAll('.mock-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>
