@@ -1,0 +1,1036 @@
+// Prisma schema for Invoice Validation & Review Platform
+// 36 tables across 15 families — Azure SQL (SQL Server)
+// Generated: 2 July 2026
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAMILY 1 — IDENTITY & ACCESS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model Client {
+  id           Int       @id @default(autoincrement())
+  name         String
+  code         String    @unique
+  address      String?
+  contactEmail String?   @map("contact_email")
+  contactPhone String?   @map("contact_phone")
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.DateTime2
+  updatedAt    DateTime? @updatedAt @map("updated_at") @db.DateTime2
+
+  users     User[]
+  userRoles UserRole[]
+  contracts Contract[]
+  packages  Package[]
+
+  @@index([isActive])
+  @@map("clients")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  clientId     Int?      @map("client_id")
+  email        String    @unique
+  displayName  String    @map("display_name")
+  jobTitle     String?   @map("job_title")
+  passwordHash String?   @map("password_hash")
+  entraOid     String?   @unique @map("entra_oid")
+  lastLoginAt  DateTime? @map("last_login_at") @db.DateTime2
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.DateTime2
+  updatedAt    DateTime? @updatedAt @map("updated_at") @db.DateTime2
+
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  sessions               UserSession[]
+  userRoles              UserRole[]
+  grantedRoles           UserRole[]              @relation("GrantedByUser")
+  contractsCreated       Contract[]
+  contractsConfigured    ContractConfig[]
+  packagesSubmitted      Package[]               @relation("SubmittedByUser")
+  packagesReviewed       Package[]               @relation("ReviewedByUser")
+  packagesApproved       Package[]               @relation("ApprovedByUser")
+  packagesCreated        Package[]               @relation("CreatedByUser")
+  documentsUploaded      PackageDocument[]
+  agentPlansConfirmed    AgentPlan[]
+  validationRuns         ValidationRun[]
+  exceptionResolutions   ExceptionResolution[]
+  reviewActionLogs       ReviewActionLog[]
+  auditEvents            AuditEvent[]
+  dataChangeLogs         DataChangeLog[]
+  notifications          Notification[]
+  notificationPrefs      NotificationPreference[]
+  systemConfigsUpdated   SystemConfig[]
+
+  @@index([clientId])
+  @@index([isActive])
+  @@map("users")
+}
+
+model Role {
+  id          Int     @id @default(autoincrement())
+  code        String  @unique
+  displayName String  @map("display_name")
+  description String?
+  isActive    Boolean @default(true) @map("is_active")
+
+  userRoles UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @map("user_id")
+  roleId       Int       @map("role_id")
+  clientId     Int?      @map("client_id")
+  grantedBy    Int?      @map("granted_by")
+  grantedAt    DateTime  @default(now()) @map("granted_at") @db.DateTime2
+  revokedAt    DateTime? @map("revoked_at") @db.DateTime2
+  revokeReason String? @db.NVarChar(Max)   @map("revoke_reason")
+
+  user      User    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  role      Role    @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  client    Client? @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  grantedByUser User? @relation("GrantedByUser", fields: [grantedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([userId, roleId, clientId])
+  @@index([userId])
+  @@index([clientId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model UserSession {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @map("user_id")
+  sessionToken String    @unique @map("session_token")
+  ipAddress    String?   @map("ip_address")
+  userAgent    String? @db.NVarChar(Max)   @map("user_agent")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.DateTime2
+  expiresAt    DateTime  @map("expires_at") @db.DateTime2
+  lastActiveAt DateTime? @map("last_active_at") @db.DateTime2
+  revokedAt    DateTime? @map("revoked_at") @db.DateTime2
+
+  user User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("user_sessions")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAMILY 2 — CONTRACT MASTER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model Contract {
+  id                  Int       @id @default(autoincrement())
+  clientId            Int       @map("client_id")
+  contractNo          String?   @map("contract_no")
+  contractName        String    @map("contract_name")
+  contractorName      String?   @map("contractor_name")
+  ownerName           String?   @map("owner_name")
+  projectDescription  String? @db.NVarChar(Max)   @map("project_description")
+  projectLocation     String?   @map("project_location")
+  contractStartDate   DateTime? @map("contract_start_date") @db.DateTime2
+  contractEndDate     DateTime? @map("contract_end_date") @db.DateTime2
+  originalContractSum Decimal?  @map("original_contract_sum") @db.Decimal(18, 2)
+  currency            String    @default("USD")
+  isActive            Boolean   @default(true) @map("is_active")
+  createdBy           Int?      @map("created_by")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.DateTime2
+  updatedAt           DateTime? @updatedAt @map("updated_at") @db.DateTime2
+
+  client    Client  @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator   User?   @relation(fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  config    ContractConfig?
+  packages  Package[]
+
+  @@index([clientId])
+  @@index([isActive])
+  @@index([contractNo])
+  @@map("contracts")
+}
+
+model ContractConfig {
+  id                              Int       @id @default(autoincrement())
+  contractId                      Int       @unique @map("contract_id")
+  retainageRatePct                Decimal   @default(10.0) @map("retainage_rate_pct") @db.Decimal(18, 2)
+  retainageAppliesTo              String    @default("BOTH") @map("retainage_applies_to")
+  retainageReleaseThresholdPct    Decimal?  @default(50.0) @map("retainage_release_threshold_pct") @db.Decimal(18, 2)
+  maxRetainagePct                 Decimal?  @default(10.0) @map("max_retainage_pct") @db.Decimal(18, 2)
+  crossFileToleranceAmt           Decimal   @default(10.0) @map("cross_file_tolerance_amt") @db.Decimal(18, 2)
+  mathToleranceAmt                Decimal   @default(0.01) @map("math_tolerance_amt") @db.Decimal(18, 2)
+  confidenceThreshold             Decimal   @default(0.80) @map("confidence_threshold") @db.Decimal(18, 2)
+  maxPctComplete                  Decimal   @default(100.0) @map("max_pct_complete") @db.Decimal(18, 2)
+  periodContinuityCheck           Boolean   @default(true) @map("period_continuity_check")
+  originalContractSum             Decimal?  @map("original_contract_sum") @db.Decimal(18, 2)
+  expectedRetainagePctDisplay     Decimal?  @map("expected_retainage_pct_display") @db.Decimal(18, 2)
+  customRulesJson                 String? @db.NVarChar(Max)   @map("custom_rules_json")
+  notes                           String?
+  configuredBy                    Int?      @map("configured_by")
+  createdAt                       DateTime  @default(now()) @map("created_at") @db.DateTime2
+  updatedAt                       DateTime? @updatedAt @map("updated_at") @db.DateTime2
+
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  configurer User?    @relation(fields: [configuredBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("contract_configs")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAMILY 3 — REFERENCE / LOOKUP
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model RefExceptionType {
+  id                       Int     @id @default(autoincrement())
+  code                     String  @unique
+  displayName              String  @map("display_name")
+  description              String?
+  severity                 String
+  routing                  String
+  canBulkResolve           Boolean @default(true) @map("can_bulk_resolve")
+  requiresCommentOnOverride Boolean @default(true) @map("requires_comment_on_override")
+  isActive                 Boolean @default(true) @map("is_active")
+  sortOrder                Int?    @default(99) @map("sort_order")
+
+  @@map("ref_exception_types")
+}
+
+model RefDocumentType {
+  id          Int     @id @default(autoincrement())
+  code        String  @unique
+  displayName String  @map("display_name")
+  fileRole    String? @map("file_role")
+  description String?
+  isActive    Boolean @default(true) @map("is_active")
+
+  @@map("ref_document_types")
+}
+
+model RefValidationRuleType {
+  id                    Int     @id @default(autoincrement())
+  code                  String  @unique
+  displayName           String  @map("display_name")
+  description           String?
+  producesExceptionType String? @map("produces_exception_type")
+  isActive              Boolean @default(true) @map("is_active")
+
+  @@map("ref_validation_rule_types")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAMILY 4 — PACKAGES & DOCUMENT MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model Package {
+  id                   Int       @id @default(autoincrement())
+  clientId             Int       @map("client_id")
+  contractId           Int       @map("contract_id")
+  billingPeriodMonth   Int       @map("billing_period_month")
+  billingPeriodYear    Int       @map("billing_period_year")
+  billingPeriodLabel   String?   @map("billing_period_label")
+  packageStatus        String    @default("DRAFT") @map("package_status")
+  fileHash1            String?   @map("file_hash_1")
+  fileHash2            String?   @map("file_hash_2")
+  fileHash3            String?   @map("file_hash_3")
+  totalItemsExtracted  Int?      @map("total_items_extracted")
+  autoClearedCount     Int?      @map("auto_cleared_count")
+  exceptionsCount      Int?      @map("exceptions_count")
+  dollarAtRisk         Decimal?  @map("dollar_at_risk") @db.Decimal(18, 2)
+  submittedBy          Int?      @map("submitted_by")
+  submittedAt          DateTime? @map("submitted_at") @db.DateTime2
+  reviewedBy           Int?      @map("reviewed_by")
+  reviewedAt           DateTime? @map("reviewed_at") @db.DateTime2
+  approvedBy           Int?      @map("approved_by")
+  approvedAt           DateTime? @map("approved_at") @db.DateTime2
+  rejectionReason      String? @db.NVarChar(Max)   @map("rejection_reason")
+  createdBy            Int?      @map("created_by")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.DateTime2
+  updatedAt            DateTime? @updatedAt @map("updated_at") @db.DateTime2
+
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  contract  Contract @relation(fields: [contractId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  submitter User?    @relation("SubmittedByUser", fields: [submittedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  reviewer  User?    @relation("ReviewedByUser", fields: [reviewedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approver  User?    @relation("ApprovedByUser", fields: [approvedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator   User?    @relation("CreatedByUser", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  documents             PackageDocument[]
+  pipelineSteps         ProcessingPipelineStep[]
+  agentPlan             AgentPlan?
+  gcHeader              GcPayApplicationHeader?
+  gcSovLines            GcPayApplicationSovLine[]
+  subHeaders            SubPayApplicationHeader[]
+  subSovLines           SubPayApplicationSovLine[]
+  supportingItems       SupportingDocumentItem[]
+  validationRuns        ValidationRun[]
+  reconciliationResults ReconciliationResult[]
+  exceptionGroups       ExceptionGroup[]
+  exceptions            Exception[]
+  reviewActionLogs      ReviewActionLog[]
+  auditEvents           AuditEvent[]
+  activityLogs          ActivityLog[]
+  dataChangeLogs        DataChangeLog[]
+  notifications         Notification[]
+  apiIntegrationLogs    ApiIntegrationLog[]
+
+  @@unique([contractId, billingPeriodMonth, billingPeriodYear])
+  @@index([contractId])
+  @@index([clientId])
+  @@index([packageStatus])
+  @@index([billingPeriodYear])
+  @@map("packages")
+}
+
+model PackageDocument {
+  id                       Int       @id @default(autoincrement())
+  packageId                Int       @map("package_id")
+  fileRole                 String    @map("file_role")
+  originalFilename         String?   @map("original_filename")
+  storedPath               String?   @map("stored_path")
+  sharepointUrl            String? @db.NVarChar(Max)   @map("sharepoint_url")
+  fileSizeBytes            Int?      @map("file_size_bytes")
+  pageCount                Int?      @map("page_count")
+  fileHash                 String?   @map("file_hash")
+  mimeType                 String?   @default("application/pdf") @map("mime_type")
+  uploadStatus             String    @default("PENDING") @map("upload_status")
+  quarantineReason         String? @db.NVarChar(Max)   @map("quarantine_reason")
+  classificationResult     String?   @map("classification_result")
+  classificationConfidence Decimal?  @map("classification_confidence") @db.Decimal(18, 2)
+  uploadedAt               DateTime? @map("uploaded_at") @db.DateTime2
+  uploadedBy               Int?      @map("uploaded_by")
+
+  package  Package @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  uploader User?   @relation(fields: [uploadedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  pages              DocumentPage[]
+  rawExtractedFields RawExtractedField[]
+  supportingItems    SupportingDocumentItem[]
+  sharepointRef      SharepointDocumentRef?
+  exceptionsEvidence1 Exception[] @relation("EvidenceDoc1")
+  exceptionsEvidence2 Exception[] @relation("EvidenceDoc2")
+
+  @@unique([packageId, fileRole])
+  @@index([packageId])
+  @@index([fileRole])
+  @@index([uploadStatus])
+  @@map("package_documents")
+}
+
+model DocumentPage {
+  id                       Int      @id @default(autoincrement())
+  packageDocumentId        Int      @map("package_document_id")
+  pageNo                   Int      @map("page_no")
+  widthPts                 Decimal? @map("width_pts") @db.Decimal(18, 2)
+  heightPts                Decimal? @map("height_pts") @db.Decimal(18, 2)
+  rotationDegrees          Int?     @default(0) @map("rotation_degrees")
+  ocrText                  String? @db.NVarChar(Max)  @map("ocr_text")
+  classification           String?
+  classificationConfidence Decimal? @map("classification_confidence") @db.Decimal(18, 2)
+  isBlank                  Boolean? @default(false) @map("is_blank")
+
+  packageDocument PackageDocument @relation(fields: [packageDocumentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([packageDocumentId, pageNo])
+  @@index([packageDocumentId])
+  @@index([classification])
+  @@map("document_pages")
+}
+
+model ProcessingPipelineStep {
+  id               Int       @id @default(autoincrement())
+  packageId        Int       @map("package_id")
+  stepNo           Int       @map("step_no")
+  stepName         String    @map("step_name")
+  status           String    @default("pending")
+  subProgressCurrent Int?    @map("sub_progress_current")
+  subProgressTotal   Int?    @map("sub_progress_total")
+  subProgressLabel   String? @db.NVarChar(Max) @map("sub_progress_label")
+  startedAt        DateTime? @map("started_at") @db.DateTime2
+  completedAt      DateTime? @map("completed_at") @db.DateTime2
+  errorMessage     String? @db.NVarChar(Max)   @map("error_message")
+  retryCount       Int?      @default(0) @map("retry_count")
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([packageId, stepNo])
+  @@index([packageId])
+  @@index([status])
+  @@map("processing_pipeline_steps")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAMILY 5 — AGENT PLANNING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model AgentPlan {
+  id                   Int      @id @default(autoincrement())
+  packageId            Int      @unique @map("package_id")
+  confirmedBy          Int      @map("confirmed_by")
+  confirmedAt          DateTime @map("confirmed_at") @db.DateTime2
+  agentIdentifiedCount Int?     @map("agent_identified_count")
+  manuallyAddedCount   Int?     @default(0) @map("manually_added_count")
+  notes                String?
+  createdAt            DateTime @default(now()) @map("created_at") @db.DateTime2
+
+  package   Package         @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  confirmer User            @relation(fields: [confirmedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  items     AgentPlanItem[]
+
+  @@map("agent_plans")
+}
+
+model AgentPlanItem {
+  id                Int      @id @default(autoincrement())
+  agentPlanId       Int      @map("agent_plan_id")
+  seqNo             Int      @map("seq_no")
+  subcontractorName String   @map("subcontractor_name")
+  originalOcrName   String?  @map("original_ocr_name")
+  expectedAppNo     String?  @map("expected_app_no")
+  billedAmountFile1 Decimal? @map("billed_amount_file1") @db.Decimal(18, 2)
+  gcSovLineIds      String?  @map("gc_sov_line_ids")
+  source            String   @default("AGENT")
+  isManuallyAdded   Boolean  @default(false) @map("is_manually_added")
+  notes             String?
+
+  agentPlan  AgentPlan                @relation(fields: [agentPlanId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  gcSovLines GcPayApplicationSovLine[]
+  subHeaders SubPayApplicationHeader[]
+
+  @@index([agentPlanId])
+  @@index([source])
+  @@map("agent_plan_items")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAMILY 6 — AI EXTRACTION STAGING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model RawExtractedField {
+  id                    Int      @id @default(autoincrement())
+  packageDocumentId     Int      @map("package_document_id")
+  agentRunId            String?  @map("agent_run_id")
+  pageNo                Int?     @map("page_no")
+  fieldName             String?  @map("field_name")
+  fieldCategory         String?  @map("field_category")
+  rawValue              String? @db.NVarChar(Max)  @map("raw_value")
+  normalizedValue       String? @db.NVarChar(Max)  @map("normalized_value")
+  bboxX                 Decimal? @map("bbox_x") @db.Decimal(18, 2)
+  bboxY                 Decimal? @map("bbox_y") @db.Decimal(18, 2)
+  bboxWidth             Decimal? @map("bbox_width") @db.Decimal(18, 2)
+  bboxHeight            Decimal? @map("bbox_height") @db.Decimal(18, 2)
+  extractionConfidence  Decimal? @map("extraction_confidence") @db.Decimal(18, 2)
+  isTableCell           Boolean? @default(false) @map("is_table_cell")
+  tableRowNo            Int?     @map("table_row_no")
+  tableColName          String?  @map("table_col_name")
+  createdAt             DateTime @default(now()) @map("created_at") @db.DateTime2
+
+  packageDocument PackageDocument @relation(fields: [packageDocumentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  dataChangeLogs  DataChangeLog[]
+
+  @@index([packageDocumentId])
+  @@index([agentRunId])
+  @@index([pageNo])
+  @@index([fieldName])
+  @@index([extractionConfidence])
+  @@map("raw_extracted_fields")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAMILY 7 — CONTRACTOR DATA (FILE 1)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model GcPayApplicationHeader {
+  id                     Int       @id @default(autoincrement())
+  packageId              Int       @unique @map("package_id")
+  agentRunId             String?   @map("agent_run_id")
+  toOwner                String?   @map("to_owner")
+  fromContractor         String?   @map("from_contractor")
+  projectName            String?   @map("project_name")
+  applicationNo          String?   @map("application_no")
+  period                 String?
+  periodFrom             String?   @map("period_from")
+  periodTo               String?   @map("period_to")
+  originalContractSum    Decimal?  @map("original_contract_sum") @db.Decimal(18, 2)
+  netChangeOrders        Decimal?  @map("net_change_orders") @db.Decimal(18, 2)
+  contractSumToDate      Decimal?  @map("contract_sum_to_date") @db.Decimal(18, 2)
+  totalCompletedStored   Decimal?  @map("total_completed_stored") @db.Decimal(18, 2)
+  retainageCompleted     Decimal?  @map("retainage_completed") @db.Decimal(18, 2)
+  retainageMaterials     Decimal?  @map("retainage_materials") @db.Decimal(18, 2)
+  totalRetainage         Decimal?  @map("total_retainage") @db.Decimal(18, 2)
+  totalEarnedLessRet     Decimal?  @map("total_earned_less_ret") @db.Decimal(18, 2)
+  lessPrevCertificates   Decimal?  @map("less_prev_certificates") @db.Decimal(18, 2)
+  currentPaymentDue      Decimal?  @map("current_payment_due") @db.Decimal(18, 2)
+  balanceToFinish        Decimal?  @map("balance_to_finish") @db.Decimal(18, 2)
+  changeOrderSummary     String? @db.NVarChar(Max)   @map("change_order_summary")
+  architectSignature     String?   @map("architect_signature")
+  contractorSignature    String?   @map("contractor_signature")
+  sourcePage             Int?      @map("source_page")
+  extractionConfidence   Decimal?  @map("extraction_confidence") @db.Decimal(18, 2)
+  bboxX                  Decimal?  @map("bbox_x") @db.Decimal(18, 2)
+  bboxY                  Decimal?  @map("bbox_y") @db.Decimal(18, 2)
+  bboxWidth              Decimal?  @map("bbox_width") @db.Decimal(18, 2)
+  bboxHeight             Decimal?  @map("bbox_height") @db.Decimal(18, 2)
+  reviewNotes            String? @db.NVarChar(Max)   @map("review_notes")
+  validationStatus       String?   @default("unchecked") @map("validation_status")
+  validationNotes        String? @db.NVarChar(Max)   @map("validation_notes")
+  createdAt              DateTime  @default(now()) @map("created_at") @db.DateTime2
+  updatedAt              DateTime? @updatedAt @map("updated_at") @db.DateTime2
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("gc_pay_application_headers")
+}
+
+model GcPayApplicationSovLine {
+  id                    Int       @id @default(autoincrement())
+  packageId             Int       @map("package_id")
+  agentPlanItemId       Int?      @map("agent_plan_item_id")
+  itemNo                String?   @map("item_no")
+  timePeriod            String?   @map("time_period")
+  phases                String?
+  typeOfWork            String?   @map("type_of_work")
+  contractorName        String?   @map("contractor_name")
+  scheduledOriginal     Decimal?  @default(0) @map("scheduled_original") @db.Decimal(18, 2)
+  scheduledChangeOrders Decimal?  @default(0) @map("scheduled_change_orders") @db.Decimal(18, 2)
+  scheduledCurrent      Decimal?  @default(0) @map("scheduled_current") @db.Decimal(18, 2)
+  workCompletedPrev     Decimal?  @default(0) @map("work_completed_prev") @db.Decimal(18, 2)
+  workCompletedThis     Decimal?  @default(0) @map("work_completed_this") @db.Decimal(18, 2)
+  materialsStored       Decimal?  @default(0) @map("materials_stored") @db.Decimal(18, 2)
+  totalCompleted        Decimal?  @default(0) @map("total_completed") @db.Decimal(18, 2)
+  pct                   Decimal?  @default(0) @map("pct") @db.Decimal(18, 2)
+  balanceToFinish       Decimal?  @default(0) @map("balance_to_finish") @db.Decimal(18, 2)
+  retainage             Decimal?  @default(0) @map("retainage") @db.Decimal(18, 2)
+  file2ExtractedAmount  Decimal?  @map("file2_extracted_amount") @db.Decimal(18, 2)
+  crossFileVariance     Decimal?  @map("cross_file_variance") @db.Decimal(18, 2)
+  file2MatchedSubAppId  Int?      @map("file2_matched_sub_app_id")
+  sourcePage            Int?      @map("source_page")
+  extractionConfidence  Decimal?  @map("extraction_confidence") @db.Decimal(18, 2)
+  bboxPage              Int?      @map("bbox_page")
+  bboxX                 Decimal?  @map("bbox_x") @db.Decimal(18, 2)
+  bboxY                 Decimal?  @map("bbox_y") @db.Decimal(18, 2)
+  bboxWidth             Decimal?  @map("bbox_width") @db.Decimal(18, 2)
+  bboxHeight            Decimal?  @map("bbox_height") @db.Decimal(18, 2)
+  reviewNotes           String? @db.NVarChar(Max)   @map("review_notes")
+  validationStatus      String?   @default("unchecked") @map("validation_status")
+  validationNote        String? @db.NVarChar(Max)   @map("validation_note")
+  createdAt             DateTime  @default(now()) @map("created_at") @db.DateTime2
+  updatedAt             DateTime? @updatedAt @map("updated_at") @db.DateTime2
+
+  package        Package              @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  agentPlanItem  AgentPlanItem?        @relation(fields: [agentPlanItemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  matchedSubApp  SubPayApplicationHeader? @relation(fields: [file2MatchedSubAppId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  supportingItems SupportingDocumentItem[]
+
+  @@index([packageId])
+  @@index([contractorName])
+  @@index([validationStatus])
+  @@index([agentPlanItemId])
+  @@map("gc_pay_application_sov_lines")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAMILY 8 — SUB-CONTRACTOR DATA (FILE 2)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model SubPayApplicationHeader {
+  id                        Int       @id @default(autoincrement())
+  packageId                 Int       @map("package_id")
+  agentPlanItemId           Int?      @map("agent_plan_item_id")
+  seqId                     Int?      @map("seq_id")
+  startPage                 Int?      @map("start_page")
+  endPage                   Int?      @map("end_page")
+  documentType              String?   @map("document_type")
+  documentCategory          String?   @map("document_category")
+  subcontractorName         String?   @map("subcontractor_name")
+  applicationNo             String?   @map("application_no")
+  applicationDate           String?   @map("application_date")
+  periodFrom                String?   @map("period_from")
+  periodTo                  String?   @map("period_to")
+  invoiceTo                 String?   @map("invoice_to")
+  projectNameOnDoc          String?   @map("project_name_on_doc")
+  contractPoNumber          String?   @map("contract_po_number")
+  originalContractSum       Decimal?  @map("original_contract_sum") @db.Decimal(18, 2)
+  netChangeOrders           Decimal?  @map("net_change_orders") @db.Decimal(18, 2)
+  contractSumToDate         Decimal?  @map("contract_sum_to_date") @db.Decimal(18, 2)
+  totalCompletedStored      Decimal?  @map("total_completed_stored") @db.Decimal(18, 2)
+  completedWorkThisPeriod   Decimal?  @map("completed_work_this_period") @db.Decimal(18, 2)
+  totalRetainage            Decimal?  @map("total_retainage") @db.Decimal(18, 2)
+  retainagePercent          Decimal?  @map("retainage_percent") @db.Decimal(18, 2)
+  totalEarnedLessRetainage  Decimal?  @map("total_earned_less_retainage") @db.Decimal(18, 2)
+  lessPrevCertificates      Decimal?  @map("less_prev_certificates") @db.Decimal(18, 2)
+  currentPaymentDue         Decimal?  @map("current_payment_due") @db.Decimal(18, 2)
+  balanceToFinish           Decimal?  @map("balance_to_finish") @db.Decimal(18, 2)
+  g703ScheduledValue        Decimal?  @map("g703_scheduled_value") @db.Decimal(18, 2)
+  g703WorkPrev              Decimal?  @map("g703_work_prev") @db.Decimal(18, 2)
+  g703WorkThisPeriod        Decimal?  @map("g703_work_this_period") @db.Decimal(18, 2)
+  g703MaterialsStored       Decimal?  @map("g703_materials_stored") @db.Decimal(18, 2)
+  g703TotalCompleted        Decimal?  @map("g703_total_completed") @db.Decimal(18, 2)
+  g703Retainage             Decimal?  @map("g703_retainage") @db.Decimal(18, 2)
+  g703EarnedLessRet         Decimal?  @map("g703_earned_less_ret") @db.Decimal(18, 2)
+  g703BalanceToFinish       Decimal?  @map("g703_balance_to_finish") @db.Decimal(18, 2)
+  reconFlag                 String?   @map("recon_flag")
+  contractorSignature       String?   @map("contractor_signature")
+  architectSignature        String?   @map("architect_signature")
+  notarized                 String?
+  additionalSupportingDocs  String? @db.NVarChar(Max)   @map("additional_supporting_docs")
+  extractionConfidence      Decimal?  @map("extraction_confidence") @db.Decimal(18, 2)
+  validationStatus          String?   @default("unchecked") @map("validation_status")
+  validationNote            String? @db.NVarChar(Max)   @map("validation_note")
+  rawJson                   String? @db.NVarChar(Max)   @map("raw_json")
+  createdAt                 DateTime  @default(now()) @map("created_at") @db.DateTime2
+  updatedAt                 DateTime? @updatedAt @map("updated_at") @db.DateTime2
+
+  package       Package       @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  agentPlanItem AgentPlanItem? @relation(fields: [agentPlanItemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sovLines      SubPayApplicationSovLine[]
+  matchedGcLines GcPayApplicationSovLine[]
+
+  @@index([packageId])
+  @@index([agentPlanItemId])
+  @@index([subcontractorName])
+  @@index([validationStatus])
+  @@map("sub_pay_application_headers")
+}
+
+model SubPayApplicationSovLine {
+  id                   Int       @id @default(autoincrement())
+  packageId            Int       @map("package_id")
+  subAppId             Int       @map("sub_app_id")
+  sourcePage           Int?      @map("source_page")
+  itemNo               String?   @map("item_no")
+  description          String?
+  scheduledValue       Decimal?  @map("scheduled_value") @db.Decimal(18, 2)
+  workCompletedPrev    Decimal?  @map("work_completed_prev") @db.Decimal(18, 2)
+  workCompletedThis    Decimal?  @map("work_completed_this") @db.Decimal(18, 2)
+  materialsStored      Decimal?  @map("materials_stored") @db.Decimal(18, 2)
+  totalCompleted       Decimal?  @map("total_completed") @db.Decimal(18, 2)
+  pctComplete          Decimal?  @map("pct_complete") @db.Decimal(18, 2)
+  retainage            Decimal?  @map("retainage") @db.Decimal(18, 2)
+  balanceToFinish      Decimal?  @map("balance_to_finish") @db.Decimal(18, 2)
+  extractionConfidence Decimal?  @map("extraction_confidence") @db.Decimal(18, 2)
+  bboxPage             Int?      @map("bbox_page")
+  bboxX                Decimal?  @map("bbox_x") @db.Decimal(18, 2)
+  bboxY                Decimal?  @map("bbox_y") @db.Decimal(18, 2)
+  bboxWidth            Decimal?  @map("bbox_width") @db.Decimal(18, 2)
+  bboxHeight           Decimal?  @map("bbox_height") @db.Decimal(18, 2)
+  validationStatus     String?   @default("unchecked") @map("validation_status")
+  validationNote       String? @db.NVarChar(Max)   @map("validation_note")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.DateTime2
+  updatedAt            DateTime? @updatedAt @map("updated_at") @db.DateTime2
+
+  package Package                @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subApp  SubPayApplicationHeader @relation(fields: [subAppId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([packageId])
+  @@index([subAppId])
+  @@map("sub_pay_application_sov_lines")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAMILY 9 — SUPPORTING DOCUMENTS (FILE 3)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model SupportingDocumentItem {
+  id                   Int       @id @default(autoincrement())
+  packageId            Int       @map("package_id")
+  packageDocumentId    Int       @map("package_document_id")
+  pageNo               Int?      @map("page_no")
+  documentType         String?   @map("document_type")
+  vendorName           String?   @map("vendor_name")
+  invoiceDate          String?   @map("invoice_date")
+  invoiceNo            String?   @map("invoice_no")
+  description          String?
+  amount               Decimal?  @db.Decimal(18, 2)
+  currency             String?   @default("USD")
+  taxAmount            Decimal?  @map("tax_amount") @db.Decimal(18, 2)
+  totalAmount          Decimal?  @map("total_amount") @db.Decimal(18, 2)
+  linkedSovLineId      Int?      @map("linked_sov_line_id")
+  matchConfidence      Decimal?  @map("match_confidence") @db.Decimal(18, 2)
+  matchMethod          String?   @map("match_method")
+  extractionConfidence Decimal?  @map("extraction_confidence") @db.Decimal(18, 2)
+  bboxPage             Int?      @map("bbox_page")
+  bboxX                Decimal?  @map("bbox_x") @db.Decimal(18, 2)
+  bboxY                Decimal?  @map("bbox_y") @db.Decimal(18, 2)
+  bboxWidth            Decimal?  @map("bbox_width") @db.Decimal(18, 2)
+  bboxHeight           Decimal?  @map("bbox_height") @db.Decimal(18, 2)
+  validationStatus     String?   @default("unchecked") @map("validation_status")
+  validationNote       String? @db.NVarChar(Max)   @map("validation_note")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.DateTime2
+  updatedAt            DateTime? @updatedAt @map("updated_at") @db.DateTime2
+
+  package         Package                  @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  packageDocument PackageDocument           @relation(fields: [packageDocumentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  linkedSovLine   GcPayApplicationSovLine?  @relation(fields: [linkedSovLineId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([packageId])
+  @@index([packageDocumentId])
+  @@index([linkedSovLineId])
+  @@index([documentType])
+  @@map("supporting_document_items")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAMILY 10 — VALIDATION ENGINE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model ValidationRun {
+  id                       Int       @id @default(autoincrement())
+  packageId                Int       @map("package_id")
+  runNumber                Int       @map("run_number")
+  triggeredBy              Int?      @map("triggered_by")
+  runStatus                String    @default("RUNNING") @map("run_status")
+  runStartedAt             DateTime  @default(now()) @map("run_started_at") @db.DateTime2
+  runCompletedAt           DateTime? @map("run_completed_at") @db.DateTime2
+  totalItems               Int?      @map("total_items")
+  autoClearedCount         Int?      @map("auto_cleared_count")
+  exceptionsCount          Int?      @map("exceptions_count")
+  blockingExceptionsCount  Int?      @map("blocking_exceptions_count")
+  dollarAtRisk             Decimal?  @map("dollar_at_risk") @db.Decimal(18, 2)
+  errorMessage             String? @db.NVarChar(Max)   @map("error_message")
+  createdAt                DateTime  @default(now()) @map("created_at") @db.DateTime2
+
+  package              Package               @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  triggeredByUser      User?                 @relation(fields: [triggeredBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  reconciliationResults ReconciliationResult[]
+  exceptionGroups      ExceptionGroup[]
+  exceptions           Exception[]
+
+  @@index([packageId])
+  @@index([runStatus])
+  @@map("validation_runs")
+}
+
+model ReconciliationResult {
+  id                 Int      @id @default(autoincrement())
+  packageId          Int      @map("package_id")
+  validationRunId    Int      @map("validation_run_id")
+  reconciliationType String   @map("reconciliation_type")
+  entityType         String?  @map("entity_type")
+  entityId           Int?     @map("entity_id")
+  jvAmount           Decimal? @map("jv_amount") @db.Decimal(18, 2)
+  subAmount          Decimal? @map("sub_amount") @db.Decimal(18, 2)
+  expectedAmount     Decimal? @map("expected_amount") @db.Decimal(18, 2)
+  computedAmount     Decimal? @map("computed_amount") @db.Decimal(18, 2)
+  variance           Decimal? @db.Decimal(18, 2)
+  toleranceApplied   Decimal? @map("tolerance_applied") @db.Decimal(18, 2)
+  passed             Boolean
+  failureReason      String? @db.NVarChar(Max)  @map("failure_reason")
+  notes              String?
+  createdAt          DateTime @default(now()) @map("created_at") @db.DateTime2
+
+  package       Package       @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  validationRun ValidationRun @relation(fields: [validationRunId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([packageId])
+  @@index([validationRunId])
+  @@index([entityType])
+  @@index([passed])
+  @@map("reconciliation_results")
+}
+
+model ExceptionGroup {
+  id                Int       @id @default(autoincrement())
+  packageId         Int       @map("package_id")
+  validationRunId   Int       @map("validation_run_id")
+  exceptionTypeCode String    @map("exception_type_code")
+  displayLabel      String    @map("display_label")
+  severity          String
+  itemCount         Int       @default(0) @map("item_count")
+  resolvedCount     Int       @default(0) @map("resolved_count")
+  dollarAtRisk      Decimal   @default(0) @map("dollar_at_risk") @db.Decimal(18, 2)
+  status            String    @default("open")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.DateTime2
+  updatedAt         DateTime? @updatedAt @map("updated_at") @db.DateTime2
+
+  package       Package       @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  validationRun ValidationRun @relation(fields: [validationRunId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  exceptions    Exception[]
+
+  @@index([packageId])
+  @@index([exceptionTypeCode])
+  @@index([status])
+  @@map("exception_groups")
+}
+
+model Exception {
+  id                   Int       @id @default(autoincrement())
+  packageId            Int       @map("package_id")
+  validationRunId      Int       @map("validation_run_id")
+  exceptionGroupId     Int?      @map("exception_group_id")
+  exceptionTypeCode    String    @map("exception_type_code")
+  entityType           String?   @map("entity_type")
+  entityId             Int?      @map("entity_id")
+  title                String
+  description          String?
+  file1Value           Decimal?  @map("file1_value") @db.Decimal(18, 2)
+  file2Value           Decimal?  @map("file2_value") @db.Decimal(18, 2)
+  expectedValue        Decimal?  @map("expected_value") @db.Decimal(18, 2)
+  variance             Decimal?  @db.Decimal(18, 2)
+  dollarAtRisk         Decimal?  @map("dollar_at_risk") @db.Decimal(18, 2)
+  extractionConfidence Decimal?  @map("extraction_confidence") @db.Decimal(18, 2)
+  riskRank             Int?      @map("risk_rank")
+  status               String    @default("open")
+  evidenceDocumentId   Int       @map("evidence_document_id")
+  evidencePageNo       Int?      @map("evidence_page_no")
+  evidenceBboxX        Decimal?  @map("evidence_bbox_x") @db.Decimal(18, 2)
+  evidenceBboxY        Decimal?  @map("evidence_bbox_y") @db.Decimal(18, 2)
+  evidenceBboxWidth    Decimal?  @map("evidence_bbox_width") @db.Decimal(18, 2)
+  evidenceBboxHeight   Decimal?  @map("evidence_bbox_height") @db.Decimal(18, 2)
+  evidence2DocumentId  Int?      @map("evidence2_document_id")
+  evidence2PageNo      Int?      @map("evidence2_page_no")
+  evidence2BboxX       Decimal?  @map("evidence2_bbox_x") @db.Decimal(18, 2)
+  evidence2BboxY       Decimal?  @map("evidence2_bbox_y") @db.Decimal(18, 2)
+  evidence2BboxWidth   Decimal?  @map("evidence2_bbox_width") @db.Decimal(18, 2)
+  evidence2BboxHeight  Decimal?  @map("evidence2_bbox_height") @db.Decimal(18, 2)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.DateTime2
+  updatedAt            DateTime? @updatedAt @map("updated_at") @db.DateTime2
+
+  package           Package          @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  validationRun     ValidationRun    @relation(fields: [validationRunId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  exceptionGroup    ExceptionGroup?  @relation(fields: [exceptionGroupId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  evidenceDocument  PackageDocument  @relation("EvidenceDoc1", fields: [evidenceDocumentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  evidence2Document PackageDocument? @relation("EvidenceDoc2", fields: [evidence2DocumentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  resolutions       ExceptionResolution[]
+
+  @@index([packageId])
+  @@index([exceptionTypeCode])
+  @@index([exceptionGroupId])
+  @@index([status])
+  @@index([riskRank])
+  @@index([entityType])
+  @@map("exceptions")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAMILY 11 — REVIEW & RESOLUTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model ExceptionResolution {
+  id              Int       @id @default(autoincrement())
+  exceptionId     Int       @map("exception_id")
+  resolvedBy      Int       @map("resolved_by")
+  resolvedAt      DateTime  @map("resolved_at") @db.DateTime2
+  resolutionType  String    @map("resolution_type")
+  overrideValue   Decimal?  @map("override_value") @db.Decimal(18, 2)
+  overrideField   String?   @map("override_field")
+  comment         String?
+  escalatedToRole String?   @map("escalated_to_role")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.DateTime2
+
+  exception Exception @relation(fields: [exceptionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  resolver  User      @relation(fields: [resolvedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([exceptionId])
+  @@index([resolvedBy])
+  @@index([resolutionType])
+  @@map("exception_resolutions")
+}
+
+model ReviewActionLog {
+  id          Int      @id @default(autoincrement())
+  packageId   Int      @map("package_id")
+  userId      Int      @map("user_id")
+  actionType  String   @map("action_type")
+  entityType  String?  @map("entity_type")
+  entityId    Int?     @map("entity_id")
+  beforeValue String? @db.NVarChar(Max)  @map("before_value")
+  afterValue  String? @db.NVarChar(Max)  @map("after_value")
+  comment     String?
+  ipAddress   String?  @map("ip_address")
+  createdAt   DateTime @default(now()) @map("created_at") @db.DateTime2
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user    User    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([packageId])
+  @@index([userId])
+  @@index([actionType])
+  @@index([createdAt])
+  @@map("review_action_logs")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAMILY 12 — AUDIT & CHANGE HISTORY
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model AuditEvent {
+  id           Int      @id @default(autoincrement())
+  packageId    Int      @map("package_id")
+  eventType    String   @map("event_type")
+  triggeredBy  Int      @map("triggered_by")
+  triggeredAt  DateTime @map("triggered_at") @db.DateTime2
+  eventSummary String? @db.NVarChar(Max)  @map("event_summary")
+  createdAt    DateTime @default(now()) @map("created_at") @db.DateTime2
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user    User    @relation(fields: [triggeredBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([packageId])
+  @@index([eventType])
+  @@index([triggeredAt])
+  @@map("audit_events")
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  packageId Int      @map("package_id")
+  level     String   @default("info")
+  stepNo    Int?     @map("step_no")
+  message   String
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime2
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([packageId])
+  @@index([stepNo])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+model DataChangeLog {
+  id            Int      @id @default(autoincrement())
+  packageId     Int      @map("package_id")
+  entityType    String   @map("entity_type")
+  entityId      Int      @map("entity_id")
+  fieldName     String   @map("field_name")
+  originalValue String? @db.NVarChar(Max)  @map("original_value")
+  newValue      String? @db.NVarChar(Max)  @map("new_value")
+  changedBy     Int      @map("changed_by")
+  changedAt     DateTime @map("changed_at") @db.DateTime2
+  reason        String
+  rawFieldId    Int?     @map("raw_field_id")
+  createdAt     DateTime @default(now()) @map("created_at") @db.DateTime2
+
+  package  Package            @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  changer  User               @relation(fields: [changedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rawField RawExtractedField? @relation(fields: [rawFieldId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([packageId])
+  @@index([entityType])
+  @@index([changedBy])
+  @@index([changedAt])
+  @@map("data_change_logs")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAMILY 13 — NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model Notification {
+  id               Int       @id @default(autoincrement())
+  userId           Int       @map("user_id")
+  packageId        Int?      @map("package_id")
+  notificationType String    @map("notification_type")
+  title            String
+  message          String
+  actionUrl        String? @db.NVarChar(Max)   @map("action_url")
+  isRead           Boolean   @default(false) @map("is_read")
+  readAt           DateTime? @map("read_at") @db.DateTime2
+  emailSent        Boolean   @default(false) @map("email_sent")
+  emailSentAt      DateTime? @map("email_sent_at") @db.DateTime2
+  createdAt        DateTime  @default(now()) @map("created_at") @db.DateTime2
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  package Package? @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@index([packageId])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id               Int       @id @default(autoincrement())
+  userId           Int       @map("user_id")
+  notificationType String    @map("notification_type")
+  inAppEnabled     Boolean   @default(true) @map("in_app_enabled")
+  emailEnabled     Boolean   @default(false) @map("email_enabled")
+  updatedAt        DateTime? @updatedAt @map("updated_at") @db.DateTime2
+
+  user User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([userId, notificationType])
+  @@map("notification_preferences")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAMILY 14 — EXTERNAL INTEGRATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model ApiIntegrationLog {
+  id                       Int      @id @default(autoincrement())
+  packageId                Int?     @map("package_id")
+  serviceName              String   @map("service_name")
+  operation                String
+  requestUrl               String? @db.NVarChar(Max)  @map("request_url")
+  httpMethod               String?  @map("http_method")
+  requestPayloadSizeBytes  Int?     @map("request_payload_size_bytes")
+  responseStatusCode       Int?     @map("response_status_code")
+  responsePayloadSizeBytes Int?     @map("response_payload_size_bytes")
+  durationMs               Int?     @map("duration_ms")
+  success                  Boolean
+  errorCode                String?  @map("error_code")
+  errorMessage             String? @db.NVarChar(Max)  @map("error_message")
+  tokensUsed               Int?     @map("tokens_used")
+  costEstimateUsd          Decimal? @map("cost_estimate_usd") @db.Decimal(18, 2)
+  agentRunId               String?  @map("agent_run_id")
+  createdAt                DateTime @default(now()) @map("created_at") @db.DateTime2
+
+  package Package? @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([packageId])
+  @@index([serviceName])
+  @@index([success])
+  @@index([createdAt])
+  @@map("api_integration_logs")
+}
+
+model SharepointDocumentRef {
+  id                 Int       @id @default(autoincrement())
+  packageDocumentId  Int       @unique @map("package_document_id")
+  sharepointSiteId   String?   @map("sharepoint_site_id")
+  sharepointDriveId  String?   @map("sharepoint_drive_id")
+  sharepointItemId   String?   @map("sharepoint_item_id")
+  sharepointUrl      String? @db.NVarChar(Max)   @map("sharepoint_url")
+  sharepointVersion  String?   @map("sharepoint_version")
+  uploadedAt         DateTime? @map("uploaded_at") @db.DateTime2
+  lastSyncedAt       DateTime? @map("last_synced_at") @db.DateTime2
+  retentionLabel     String?   @map("retention_label")
+  createdAt          DateTime  @default(now()) @map("created_at") @db.DateTime2
+
+  packageDocument PackageDocument @relation(fields: [packageDocumentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([sharepointItemId])
+  @@map("sharepoint_document_refs")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAMILY 15 — SYSTEM CONFIGURATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model SystemConfig {
+  id          Int       @id @default(autoincrement())
+  configKey   String    @unique @map("config_key")
+  configValue String    @map("config_value")
+  dataType    String    @map("data_type")
+  description String?
+  isSensitive Boolean   @default(false) @map("is_sensitive")
+  updatedBy   Int?      @map("updated_by")
+  updatedAt   DateTime? @updatedAt @map("updated_at") @db.DateTime2
+  createdAt   DateTime  @default(now()) @map("created_at") @db.DateTime2
+
+  updater User? @relation(fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("system_configs")
+}
