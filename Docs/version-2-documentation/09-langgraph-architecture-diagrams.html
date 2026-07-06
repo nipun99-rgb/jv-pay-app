@@ -1,0 +1,2724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LangGraph Multi-Agent Orchestration Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 1rem;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            color: rgba(255,255,255,0.9);
+            text-align: center;
+            margin-bottom: 3rem;
+            font-size: 1.1rem;
+        }
+        
+        .diagram-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .diagram-section h2 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-size: 1.8rem;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 0.5rem;
+        }
+        
+        .diagram-section h3 {
+            color: #764ba2;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 1.3rem;
+        }
+        
+        .description {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            border-radius: 4px;
+        }
+        
+        .mermaid {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        
+        .key-points {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        
+        .key-points h4 {
+            color: #856404;
+            margin-bottom: 0.5rem;
+        }
+        
+        .key-points ul {
+            margin-left: 1.5rem;
+            color: #856404;
+        }
+        
+        .key-points li {
+            margin-bottom: 0.3rem;
+        }
+        
+        .legend {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        
+        .legend h4 {
+            color: #1976D2;
+            margin-bottom: 0.5rem;
+        }
+        
+        .legend-item {
+            display: inline-block;
+            margin-right: 2rem;
+            margin-bottom: 0.5rem;
+            color: #555;
+        }
+        
+        .legend-item::before {
+            content: "■";
+            margin-right: 0.5rem;
+            font-size: 1.2rem;
+        }
+        
+        .legend-item.orchestrator::before { color: #FF6B6B; }
+        .legend-item.agent::before { color: #4ECDC4; }
+        .legend-item.deterministic::before { color: #95E1D3; }
+        .legend-item.human::before { color: #FFD93D; }
+        
+        @media print {
+            body {
+                background: white;
+            }
+            .diagram-section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 LangGraph Multi-Agent Orchestration Architecture</h1>
+        <p class="subtitle">Intelligent Manager Agent with Construction Industry Domain Expertise | Adaptive Multi-Agent System | Human-in-the-Loop</p>
+        
+        <!-- Overview Diagram -->
+        <div class="diagram-section">
+            <h2>1. System Overview - Complete LangGraph Topology</h2>
+            <div class="description">
+                <strong>Architecture Pattern:</strong> Supervisor (Orchestrator) coordinating specialist agents with human-in-the-loop gates.
+                The orchestrator acts as an engagement manager, delegating tasks to specialist agents and managing user interaction throughout the workflow.
+            </div>
+            
+            <div class="mermaid">
+graph TD
+    START([User Uploads 3 Documents]) --> ORCH{Orchestrator Agent<br/>Engagement Manager}
+    
+    ORCH -->|Delegate| INGEST[Ingest Node<br/>Deterministic]
+    INGEST -->|Complete| ORCH
+    
+    ORCH -->|Delegate| CLASS[Classification Node<br/>Deterministic]
+    CLASS -->|Complete| ORCH
+    
+    ORCH -->|Delegate| EXTRACT[Extraction Agent<br/>ReAct Pattern]
+    EXTRACT -->|Report Results| ORCH
+    
+    ORCH -->|Delegate| VERIFY[Verification Agent<br/>ReAct Pattern]
+    VERIFY -->|Report Results| ORCH
+    
+    ORCH -->|Delegate| RECON[Reconciliation Agent<br/>ReAct Pattern]
+    RECON -->|Report Results| ORCH
+    
+    ORCH -->|Questions?| HUMAN[Human Gate<br/>LangGraph Interrupt]
+    HUMAN -->|User Response| ORCH
+    
+    ORCH -->|Complete| FINAL[Finalize Node<br/>Deterministic]
+    FINAL --> END([Review Interface Ready])
+    
+    style ORCH fill:#FF6B6B,stroke:#C92A2A,stroke-width:4px,color:#fff
+    style EXTRACT fill:#4ECDC4,stroke:#0A6A7A,stroke-width:3px,color:#fff
+    style VERIFY fill:#4ECDC4,stroke:#0A6A7A,stroke-width:3px,color:#fff
+    style RECON fill:#4ECDC4,stroke:#0A6A7A,stroke-width:3px,color:#fff
+    style INGEST fill:#95E1D3,stroke:#2C786C,stroke-width:2px
+    style CLASS fill:#95E1D3,stroke:#2C786C,stroke-width:2px
+    style FINAL fill:#95E1D3,stroke:#2C786C,stroke-width:2px
+    style HUMAN fill:#FFD93D,stroke:#F59F00,stroke-width:3px
+    style START fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px
+    style END fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px
+            </div>
+            
+            <div class="legend">
+                <h4>Legend:</h4>
+                <span class="legend-item orchestrator">Orchestrator Agent (ReAct)</span>
+                <span class="legend-item agent">Specialist Agents (ReAct)</span>
+                <span class="legend-item deterministic">Deterministic Nodes (No LLM)</span>
+                <span class="legend-item human">Human-in-the-Loop Gates</span>
+            </div>
+        </div>
+        
+        <!-- Intelligent Manager Architecture -->
+        <div class="diagram-section">
+            <h2>2. Intelligent Manager Agent Architecture - AI Project Manager</h2>
+            <div class="description">
+                <strong>Adaptive Multi-Agent System:</strong> The Manager Agent is an intelligent "all-rounder" with complete construction payment application domain knowledge.
+                It dynamically creates specialized agents, writes Python code for deterministic tasks, maintains hierarchical memory, enforces industry guardrails, 
+                and provides real-time updates through a live chat interface. This is not a hardcoded workflow—it's an intelligent reasoning system.
+            </div>
+            
+            <div class="mermaid">
+graph TB
+    subgraph "User Interface - Live Orchestrator Chat"
+        direction LR
+        CHAT["💬 Orchestrator Chat Window<br/>━━━━━━━━━━━━━━━━━━<br/>🎯 Manager: Processing App #12...<br/>🤖 Extraction Agent: Found 172 items<br/>🔍 QA Agent: Retainage error detected<br/>❓ Manager: User, are these duplicates?<br/>👤 User: Yes, merge them<br/>✅ Manager: Complete! 98% confidence"]
+        SQL["🗄️ SQL Browser<br/>View Projects<br/>Query History<br/>Generate Insights"]
+        BLOB["📦 Blob Explorer<br/>View Documents<br/>OCR Cache<br/>Page Images"]
+    end
+    
+    subgraph "Manager Agent Core - AI Project Manager"
+        direction TB
+        
+        MANAGER["🎯 MANAGER AGENT<br/>━━━━━━━━━━━━━━━━━━<br/>🧠 Complete Process Knowledge<br/>📋 Construction Domain Expert<br/>🔧 Dynamic Agent Creator<br/>💻 Python Code Generator<br/>🛡️ Guardrail Enforcer<br/>🎭 Persona: Contract Administrator"]
+        
+        subgraph "Manager Knowledge Base"
+            direction LR
+            K1["📚 Industry Standards<br/>AIA G702/G703 Rules<br/>Lien Law (State-Specific)<br/>Retainage Regulations<br/>Change Order Workflow"]
+            K2["📄 Project Context<br/>Contract Sum: $50M<br/>Retainage: 10%/5%<br/>Current App: #12<br/>Stakeholders<br/>Approved COs"]
+            K3["🔍 Invoice Patterns<br/>ABC Plumbing: QuickBooks<br/>XYZ Electric: Custom CSV<br/>Field Handwriting: Poor<br/>Signature Locations"]
+        end
+        
+        MANAGER --- K1
+        MANAGER --- K2
+        MANAGER --- K3
+    end
+    
+    subgraph "Hierarchical Memory System"
+        direction TB
+        MEM1["🗂️ Project Memory<br/>Contract Details<br/>Stakeholder Registry<br/>CO Ledger (Cumulative)<br/>Previous App History<br/>━━━━━━━━━━━━━━<br/>Persistent across all apps"]
+        
+        MEM2["🧠 Agent Memory<br/>Learned Patterns<br/>Quality Feedback History<br/>Sub-Specific Formats<br/>Extraction Strategies<br/>━━━━━━━━━━━━━━<br/>Shared across workflows"]
+        
+        MEM3["📝 Session Memory<br/>Current App State<br/>Pending Questions<br/>Active Agent Status<br/>User Responses<br/>━━━━━━━━━━━━━━<br/>Current workflow only"]
+    end
+    
+    subgraph "Standardized Agent Pool"
+        direction LR
+        A1["🤖 Extraction Agent<br/>━━━━━━━━━━━━<br/>Configurable Prompts<br/>Multi-Strategy<br/>Self-Validating<br/>Retry Logic"]
+        
+        A2["🔍 Quality Review Agent<br/>━━━━━━━━━━━━<br/>Math Validation<br/>Business Rules Check<br/>Confidence Scoring<br/>Feedback Generator"]
+        
+        A3["🔧 Reconciliation Agent<br/>━━━━━━━━━━━━<br/>Entity Resolution<br/>Fuzzy Matching<br/>Conflict Detection<br/>Gap Filling"]
+    end
+    
+    subgraph "Helper Agent Ecosystem"
+        direction TB
+        H1["🔍 OCR Agent<br/>Poor Scans<br/>Handwriting"]
+        H2["📊 Table Parser<br/>Complex SOV<br/>Merged Cells"]
+        H3["📐 Math Validator<br/>Verify Equations<br/>Retainage Calc"]
+        H4["📎 Lien Waiver<br/>Validator<br/>Match Amounts"]
+        H5["📸 Stored Materials<br/>Auditor<br/>Photos/Receipts"]
+        H6["📋 Previous App<br/>Comparator<br/>Anomaly Detection"]
+    end
+    
+    subgraph "Dynamic Agent Creation"
+        direction LR
+        CREATE["⚡ Agent Factory<br/>━━━━━━━━━━━━<br/>Create Custom Agents<br/>Generate Prompts<br/>Assign Tools<br/>Set Personas<br/>Configure Memory"]
+        
+        REGISTRY["📚 Agent Registry<br/>━━━━━━━━━━━━<br/>ABC Plumbing Parser<br/>QuickBooks Extractor<br/>Custom SOV Handler<br/>Signature Detector<br/>━━━━━━━━━━━━<br/>Persisted & Reusable"]
+    end
+    
+    subgraph "Code Generation Engine"
+        direction TB
+        CODE["💻 Python Code Writer<br/>━━━━━━━━━━━━<br/>Deterministic Calculations<br/>Data Transformations<br/>Batch Operations<br/>Custom Parsers<br/>━━━━━━━━━━━━<br/>Saved & Versioned"]
+        
+        SANDBOX["🧪 Code Sandbox<br/>Test Before Execute<br/>Safety Validation<br/>Error Handling"]
+    end
+    
+    subgraph "3-Tier Guardrail System"
+        direction TB
+        G1["🛑 TIER 1: BLOCK<br/>━━━━━━━━━━━━<br/>Missing Critical Fields<br/>Math Error >$10k or >5%<br/>Destructive Operations<br/>→ Escalate to Human"]
+        
+        G2["⚠️ TIER 2: FLAG<br/>━━━━━━━━━━━━<br/>Unusual Patterns<br/>Confidence 70-85%<br/>Soft Rule Violations<br/>→ Document & Review"]
+        
+        G3["✅ TIER 3: AUTO-FIX<br/>━━━━━━━━━━━━<br/>Format Issues<br/>Minor Math (<$10)<br/>Date Standardization<br/>→ Auto-Correct & Log"]
+    end
+    
+    subgraph "Quality Feedback Loop"
+        direction LR
+        QF1["1️⃣ Extract<br/>Standard Prompts"] --> QF2["2️⃣ QA Review<br/>Find Issues"]
+        QF2 --> QF3["3️⃣ Manager Analysis<br/>Refine Strategy"]
+        QF3 --> QF4["4️⃣ Re-Extract<br/>Enhanced Prompts"]
+        QF4 --> QF5{"5️⃣ Check<br/>Pass?"}
+        QF5 -->|Yes| QF6["✅ Accept"]
+        QF5 -->|No, Iter<3| QF3
+        QF5 -->|No, Iter≥3| QF7["❓ Escalate<br/>to Human"]
+    end
+    
+    %% Connections
+    CHAT --> MANAGER
+    MANAGER --> SQL
+    MANAGER --> BLOB
+    
+    MANAGER -.->|Creates| CREATE
+    CREATE -.->|Stores| REGISTRY
+    MANAGER -.->|Invokes| A1
+    MANAGER -.->|Invokes| A2
+    MANAGER -.->|Invokes| A3
+    
+    MANAGER -.->|Generates| CODE
+    CODE --> SANDBOX
+    
+    MANAGER --> MEM1
+    MANAGER --> MEM2
+    MANAGER --> MEM3
+    
+    A1 -.->|Requests| H1
+    A1 -.->|Requests| H2
+    A2 -.->|Requests| H3
+    A2 -.->|Requests| H4
+    A3 -.->|Requests| H6
+    
+    MANAGER --> G1
+    MANAGER --> G2
+    MANAGER --> G3
+    
+    A1 --> QF1
+    
+    %% Styling
+    style MANAGER fill:#FF6B6B,stroke:#C92A2A,stroke-width:4px,color:#fff,font-weight:bold
+    style CHAT fill:#FFD93D,stroke:#F59F00,stroke-width:3px
+    style CREATE fill:#9775FA,stroke:#5F3DC4,stroke-width:2px,color:#fff
+    style REGISTRY fill:#9775FA,stroke:#5F3DC4,stroke-width:2px,color:#fff
+    style CODE fill:#74C0FC,stroke:#1971C2,stroke-width:2px
+    style SANDBOX fill:#74C0FC,stroke:#1971C2,stroke-width:2px
+    
+    style A1 fill:#4ECDC4,stroke:#0A6A7A,stroke-width:2px,color:#fff
+    style A2 fill:#4ECDC4,stroke:#0A6A7A,stroke-width:2px,color:#fff
+    style A3 fill:#4ECDC4,stroke:#0A6A7A,stroke-width:2px,color:#fff
+    
+    style H1 fill:#95E1D3,stroke:#2C786C,stroke-width:2px
+    style H2 fill:#95E1D3,stroke:#2C786C,stroke-width:2px
+    style H3 fill:#95E1D3,stroke:#2C786C,stroke-width:2px
+    style H4 fill:#95E1D3,stroke:#2C786C,stroke-width:2px
+    style H5 fill:#95E1D3,stroke:#2C786C,stroke-width:2px
+    style H6 fill:#95E1D3,stroke:#2C786C,stroke-width:2px
+    
+    style G1 fill:#FA5252,stroke:#C92A2A,stroke-width:2px,color:#fff
+    style G2 fill:#FCC419,stroke:#F59F00,stroke-width:2px
+    style G3 fill:#51CF66,stroke:#2B8A3E,stroke-width:2px
+    
+    style MEM1 fill:#E7F5FF,stroke:#1971C2,stroke-width:2px
+    style MEM2 fill:#E7F5FF,stroke:#1971C2,stroke-width:2px
+    style MEM3 fill:#E7F5FF,stroke:#1971C2,stroke-width:2px
+    
+    style K1 fill:#FFF4E6,stroke:#FD7E14,stroke-width:2px
+    style K2 fill:#FFF4E6,stroke:#FD7E14,stroke-width:2px
+    style K3 fill:#FFF4E6,stroke:#FD7E14,stroke-width:2px
+            </div>
+            
+            <div class="key-points">
+                <h4>🎯 Manager Agent Intelligence - AI Project Manager Capabilities:</h4>
+                <ul>
+                    <li><strong>🧠 Domain Expert:</strong> Complete knowledge of AIA G702/G703, construction payment workflows, state lien laws, retainage rules</li>
+                    <li><strong>🎭 Persona:</strong> Acts as "Contract Administrator" understanding project context, stakeholders, and business rules</li>
+                    <li><strong>⚡ Dynamic Creation:</strong> Creates specialized agents on-the-fly (e.g., "ABC Plumbing Invoice Parser") and persists them for reuse</li>
+                    <li><strong>💻 Code Generation:</strong> Writes Python code for deterministic tasks (math, transformations) - tested in sandbox before execution</li>
+                    <li><strong>🗂️ Hierarchical Memory:</strong> Project memory (contract details), Agent memory (learned patterns), Session memory (current state)</li>
+                    <li><strong>🛡️ 3-Tier Guardrails:</strong> BLOCK critical errors, FLAG for review, AUTO-FIX minor issues</li>
+                    <li><strong>🔄 Quality Loop:</strong> QA feedback → Manager refines prompts → Re-extract (max 3 iterations → escalate to human)</li>
+                    <li><strong>🔧 Helper Orchestration:</strong> Deploys OCR, Table Parser, Math Validator, Lien Waiver, Stored Materials helpers as needed</li>
+                    <li><strong>💬 Live Chat:</strong> Real-time updates to user showing agent conversations, progress, questions, and insights</li>
+                    <li><strong>🗄️ Data Access:</strong> Can query SQL for insights, browse blob storage for documents, review historical data</li>
+                </ul>
+            </div>
+            
+            <div class="legend">
+                <h4>🏗️ Construction Industry Best Practices Encoded:</h4>
+                <div style="margin-top: 1rem; line-height: 1.8;">
+                    <strong>✅ AIA Standards:</strong> G702 Application for Payment, G703 Continuation Sheet, sequential app numbering<br>
+                    <strong>✅ Math Validation:</strong> Contract Sum = Original + Net COs, Payment Due = Earned - Previous - Retainage<br>
+                    <strong>✅ Retainage Rules:</strong> State-specific (typically 10% until 50% complete, then 5%), trade-specific exceptions<br>
+                    <strong>✅ Stored Materials:</strong> Contract allowance check, photo/receipt verification, separate retainage tracking<br>
+                    <strong>✅ Change Order Sequencing:</strong> COs must be approved before pay app date, cumulative tracking<br>
+                    <strong>✅ Cross-Document Reconciliation:</strong> G702 totals = G703 sum, Sub invoices = G703 allocations<br>
+                    <strong>✅ Lien Law Compliance:</strong> State-specific requirements, conditional waivers, preliminary notices<br>
+                    <strong>✅ Anomaly Detection:</strong> Compare to previous apps, flag unusual velocity, detect duplicates
+                </div>
+            </div>
+            
+            <div class="key-points" style="background: #E7F3FF; border-left-color: #1971C2;">
+                <h4 style="color: #1976D2;">🚀 Why This Architecture is Adaptive & Intelligent:</h4>
+                <ul style="color: #1565C0;">
+                    <li><strong>Not Hardcoded Workflow:</strong> Manager reasons about what to do next based on context, not fixed graph</li>
+                    <li><strong>Learns Over Time:</strong> Stores patterns in Agent Memory (e.g., "ABC Plumbing always front-loads invoices")</li>
+                    <li><strong>Self-Improving:</strong> Quality feedback loop refines prompts and strategies automatically</li>
+                    <li><strong>Context-Aware:</strong> Uses project memory (contract terms, stakeholders) to make better decisions</li>
+                    <li><strong>Human Partnership:</strong> Knows when to solve independently vs when to ask user for judgment</li>
+                    <li><strong>Extensible:</strong> New document types? Manager creates custom agent. New calculation? Manager writes Python.</li>
+                    <li><strong>Industry-Aligned:</strong> Follows construction payment application standards and state regulations</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- High-Level Journey -->
+        <div class="diagram-section">
+            <h2>3. High-Level Agent Journey - Start to Finish</h2>
+            <div class="description">
+                <strong>The Complete Workflow:</strong> This diagram shows the end-to-end journey of how agents collaborate to process a payment application, 
+                from initial document upload to final review. The orchestrator acts as the central coordinator, delegating tasks to specialist agents 
+                and managing human interaction throughout the process.
+            </div>
+            
+            <div class="mermaid">
+graph TB
+    subgraph "Phase 1: Upload & Preparation"
+        START([👤 User Uploads<br/>3 PDF Files]) --> ORCH1{🎯 Orchestrator<br/>Starts Workflow}
+        ORCH1 -->|5%| MSG1["📱 User: 'Processing 3 documents...'"]
+        ORCH1 --> INGEST[📦 Ingest Node<br/>Convert PDFs to Images<br/>Upload to Blob Storage]
+        INGEST -->|15 pages created| ORCH2{🎯 Orchestrator<br/>Ingestion Complete}
+        ORCH2 -->|15%| MSG2["📱 User: 'Generated 15 page images'"]
+    end
+    
+    subgraph "Phase 2: Document Classification"
+        ORCH2 --> CLASS[🔍 Classification Node<br/>3-Tier Cascade<br/>Heuristics → Text → Vision]
+        CLASS -->|Identified:<br/>1 GC Pay App<br/>2 Sub Invoices| ORCH3{🎯 Orchestrator<br/>Classification Complete}
+        ORCH3 -->|25%| MSG3["📱 User: 'Found GC G702/G703 + 2 invoices'"]
+    end
+    
+    subgraph "Phase 3: Data Extraction"
+        ORCH3 -->|Delegate| EXTRACT1[🤖 Extraction Agent<br/>Task: G702 Cover Page]
+        EXTRACT1 --> E1[Vision Extract Page 1<br/>18 fields]
+        E1 --> E2{Self-Check:<br/>All fields found?}
+        E2 -->|17/18 found| E3[Retry Focused Extraction<br/>Missing: change_order_summary]
+        E3 --> E4[✅ 18/18 Complete<br/>Confidence: 94%]
+        E2 -->|18/18 found| E4
+        E4 -->|Save to DB| ORCH4{🎯 Orchestrator<br/>G702 Complete}
+        ORCH4 -->|40%| MSG4["📱 User: '✅ G702 extracted: 18/18 fields'"]
+        
+        ORCH4 -->|Delegate| EXTRACT2[🤖 Extraction Agent<br/>Task: G703 SOV Lines]
+        EXTRACT2 --> S1[Parallel Extract Pages 2-8<br/>7 pages simultaneously]
+        S1 --> S2[Merge Results<br/>172 line items found]
+        S2 --> S3{Self-Check:<br/>Quality OK?}
+        S3 -->|⚠️ Issue Found| S4[Detected Duplicate:<br/>Item #45 & #127<br/>Same description, contractor]
+        S4 -->|Report Issue| ORCH5{🎯 Orchestrator<br/>Issue Received}
+    end
+    
+    subgraph "Phase 4: Human Interaction"
+        ORCH5 -->|Needs User Input| ASK["📱 User Question:<br/>'Are items #45 & #127 the same?'<br/>Options: Same | Different | Unsure"]
+        ASK --> HUMAN[⏸️ Human Gate<br/>Workflow Paused]
+        HUMAN -->|Wait for response| USER[👤 User Responds:<br/>'Same item - merge']
+        USER --> ORCH6{🎯 Orchestrator<br/>Response Received}
+        ORCH6 -->|55%| MSG5["📱 User: 'Thank you! Merging duplicates...'"]
+    end
+    
+    subgraph "Phase 5: Reconciliation"
+        ORCH6 -->|Delegate| RECON[🤖 Reconciliation Agent<br/>Task: Merge Duplicates]
+        RECON --> R1[Combine Items #45 & #127]
+        R1 --> R2[Update SOV:<br/>171 line items]
+        R2 -->|Save to DB| ORCH7{🎯 Orchestrator<br/>Reconciliation Complete}
+        ORCH7 -->|60%| MSG6["📱 User: '✅ Duplicates merged'"]
+    end
+    
+    subgraph "Phase 6: Verification & Quality Checks"
+        ORCH7 -->|Delegate| VERIFY[🤖 Verification Agent<br/>Task: Validate All Data]
+        VERIFY --> V1[Math Validation<br/>Check equations:<br/>sum = original + change_orders]
+        V1 --> V2[Cross-Doc Reconciliation<br/>G702 totals vs G703 sum]
+        V2 --> V3[Data Quality Checks<br/>Ranges, formats, completeness]
+        V3 --> V4{Issues<br/>Found?}
+        V4 -->|✅ All Pass| V5[Calculate Confidence: 98%]
+        V5 -->|Report Success| ORCH8{🎯 Orchestrator<br/>Verification Complete}
+        ORCH8 -->|80%| MSG7["📱 User: '✅ All validations passed (98% confidence)'"]
+    end
+    
+    subgraph "Phase 7: Finalization"
+        ORCH8 --> FINAL[📊 Finalize Node<br/>Prepare Review Interface<br/>Format Data for UI]
+        FINAL --> ORCH9{🎯 Orchestrator<br/>Workflow Complete}
+        ORCH9 -->|100%| MSG8["📱 User: '✅ Processing complete!'"]
+        ORCH9 --> RESULTS[📋 Review Interface<br/>G702: 18 fields<br/>G703: 171 items<br/>Confidence: 98%]
+        RESULTS --> END([🎉 User Reviews Data<br/>Export or Approve])
+    end
+    
+    style START fill:#E8F5E9,stroke:#2E7D32,stroke-width:3px
+    style END fill:#E8F5E9,stroke:#2E7D32,stroke-width:3px
+    
+    style ORCH1 fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
+    style ORCH2 fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
+    style ORCH3 fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
+    style ORCH4 fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
+    style ORCH5 fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
+    style ORCH6 fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
+    style ORCH7 fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
+    style ORCH8 fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
+    style ORCH9 fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
+    
+    style EXTRACT1 fill:#4ECDC4,stroke:#0A6A7A,stroke-width:3px,color:#fff
+    style EXTRACT2 fill:#4ECDC4,stroke:#0A6A7A,stroke-width:3px,color:#fff
+    style VERIFY fill:#4ECDC4,stroke:#0A6A7A,stroke-width:3px,color:#fff
+    style RECON fill:#4ECDC4,stroke:#0A6A7A,stroke-width:3px,color:#fff
+    
+    style INGEST fill:#95E1D3,stroke:#2C786C,stroke-width:2px
+    style CLASS fill:#95E1D3,stroke:#2C786C,stroke-width:2px
+    style FINAL fill:#95E1D3,stroke:#2C786C,stroke-width:2px
+    
+    style HUMAN fill:#FFD93D,stroke:#F59F00,stroke-width:4px
+    style ASK fill:#FFF3CD,stroke:#F59F00,stroke-width:2px
+    style USER fill:#FFF3CD,stroke:#F59F00,stroke-width:2px
+    
+    style MSG1 fill:#F8F9FA,stroke:#6C757D,stroke-width:1px,stroke-dasharray: 5 5
+    style MSG2 fill:#F8F9FA,stroke:#6C757D,stroke-width:1px,stroke-dasharray: 5 5
+    style MSG3 fill:#F8F9FA,stroke:#6C757D,stroke-width:1px,stroke-dasharray: 5 5
+    style MSG4 fill:#F8F9FA,stroke:#6C757D,stroke-width:1px,stroke-dasharray: 5 5
+    style MSG5 fill:#F8F9FA,stroke:#6C757D,stroke-width:1px,stroke-dasharray: 5 5
+    style MSG6 fill:#F8F9FA,stroke:#6C757D,stroke-width:1px,stroke-dasharray: 5 5
+    style MSG7 fill:#F8F9FA,stroke:#6C757D,stroke-width:1px,stroke-dasharray: 5 5
+    style MSG8 fill:#F8F9FA,stroke:#6C757D,stroke-width:1px,stroke-dasharray: 5 5
+            </div>
+            
+            <div class="key-points">
+                <h4>🎯 Journey Highlights:</h4>
+                <ul>
+                    <li><strong>7 Phases:</strong> Upload → Classification → Extraction → Human Input → Reconciliation → Verification → Finalization</li>
+                    <li><strong>9 Orchestrator Touchpoints:</strong> Orchestrator coordinates every phase transition and monitors all agents</li>
+                    <li><strong>4 Specialist Agents:</strong> Extraction (2 tasks), Verification, Reconciliation - each invoked by orchestrator</li>
+                    <li><strong>1 Human Gate:</strong> Workflow pauses when agents need user guidance for disambiguation</li>
+                    <li><strong>Real-Time Updates:</strong> User receives 8 progress messages throughout the journey (shown as dashed boxes)</li>
+                    <li><strong>Self-Validating Agents:</strong> Agents check their own work and retry (see Extraction Agent's self-check loop)</li>
+                    <li><strong>Total Time:</strong> 30-60 seconds for complete processing (depending on document complexity)</li>
+                    <li><strong>Progress Tracking:</strong> 0% → 15% → 25% → 40% → 60% → 80% → 100%</li>
+                </ul>
+            </div>
+            
+            <div class="legend">
+                <h4>📊 Phase Breakdown:</h4>
+                <div style="margin-top: 1rem;">
+                    <strong>Phase 1 (0-15%):</strong> PDF ingestion, conversion to images, blob storage upload<br>
+                    <strong>Phase 2 (15-25%):</strong> Document type classification using cascade strategy<br>
+                    <strong>Phase 3 (25-55%):</strong> Data extraction from G702 cover and G703 continuation sheet<br>
+                    <strong>Phase 4 (55-60%):</strong> Human interaction for duplicate resolution<br>
+                    <strong>Phase 5 (60-65%):</strong> Reconciliation agent merges duplicates<br>
+                    <strong>Phase 6 (65-80%):</strong> Verification agent validates math, cross-doc consistency, data quality<br>
+                    <strong>Phase 7 (80-100%):</strong> Finalize and prepare review interface
+                </div>
+            </div>
+        </div>
+        
+        <!-- Agent Hierarchy -->
+        <div class="diagram-section">
+            <h2>4. Agent Hierarchy & Structure - Complete Agent Portfolio</h2>
+            <div class="description">
+                <strong>Total Agents: 10 Standard + Custom (Dynamic)</strong><br>
+                This comprehensive diagram shows the complete agent hierarchy with detailed specifications for each agent including:
+                tools, memory access, cross-agent communication, roles, responsibilities, instructions, personas, and human-in-the-loop integration.
+            </div>
+            
+            <h3>📋 Agent Specifications Summary Table</h3>
+            <table style="width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.9rem;">
+                <thead style="background: #667eea; color: white;">
+                    <tr>
+                        <th style="padding: 0.75rem; border: 1px solid #ddd; text-align: left;">Agent</th>
+                        <th style="padding: 0.75rem; border: 1px solid #ddd; text-align: left;">Persona</th>
+                        <th style="padding: 0.75rem; border: 1px solid #ddd; text-align: left;">Memory Access</th>
+                        <th style="padding: 0.75rem; border: 1px solid #ddd; text-align: left;">Cross-Agent Chat</th>
+                        <th style="padding: 0.75rem; border: 1px solid #ddd; text-align: left;">Human-in-Loop</th>
+                        <th style="padding: 0.75rem; border: 1px solid #ddd; text-align: left;">Tool Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="background: #fff3cd;">
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>🎯 Manager Agent</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">Contract Administrator & AI Project Manager</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Full:</strong> Project + Agent + Session</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">Central Hub (receives from all)</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">✅ Direct (only agent that talks to user)</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">10 tools</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>🤖 Extraction Agent</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">Data Extraction Specialist</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Read:</strong> Agent Memory<br/><strong>Write:</strong> Session Memory</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">→ Manager (reports)<br/>→ Helpers (requests)</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">❌ Indirect (via Manager)</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">6 tools</td>
+                    </tr>
+                    <tr style="background: #f8f9fa;">
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>🔍 Quality Review Agent</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">Quality Assurance Auditor</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Read:</strong> Project + Session<br/><strong>Write:</strong> Session Memory</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">→ Manager (reports)<br/>→ Extraction (feedback)<br/>→ Helpers (requests)</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">❌ Indirect (via Manager)</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">6 tools</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>🔧 Reconciliation Agent</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">Data Consistency Expert</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Read:</strong> Agent Memory<br/><strong>Write:</strong> Agent + Session</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">→ Manager (reports)<br/>→ Helpers (requests)</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">❌ Indirect (via Manager)</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">5 tools</td>
+                    </tr>
+                    <tr style="background: #e7f3ff;">
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>🔍 OCR Agent</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">Handwriting Recognition Specialist</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Read Only:</strong> Session</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">→ Requester (returns results)</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">❌ No</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">2 tools</td>
+                    </tr>
+                    <tr style="background: #e7f3ff;">
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>📊 Table Parser Agent</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">Complex Layout Analyst</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Read Only:</strong> Session</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">→ Requester (returns results)</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">❌ No</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">3 tools</td>
+                    </tr>
+                    <tr style="background: #e7f3ff;">
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>📐 Math Validator Agent</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">Financial Equation Verifier</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Read:</strong> Project + Session</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">→ Requester (returns results)</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">❌ No</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">4 tools</td>
+                    </tr>
+                    <tr style="background: #e7f3ff;">
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>📎 Lien Waiver Validator</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">Lien Compliance Officer</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Read:</strong> Project + Session</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">→ Requester (returns results)</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">❌ No</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">3 tools</td>
+                    </tr>
+                    <tr style="background: #e7f3ff;">
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>📸 Stored Materials Auditor</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">Materials Verification Inspector</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Read:</strong> Project + Session</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">→ Requester (returns results)</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">❌ No</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">4 tools</td>
+                    </tr>
+                    <tr style="background: #e7f3ff;">
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>📋 Previous App Comparator</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">Historical Trend Analyst</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Read:</strong> Project Memory (full history)</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">→ Requester (returns results)</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">❌ No</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">3 tools</td>
+                    </tr>
+                    <tr style="background: #f3e5f5;">
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>⚡ Custom Agents</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">Dynamically Assigned (e.g., "QuickBooks Parser")</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Configured by Manager</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">→ Manager (reports)</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">❌ Indirect (via Manager)</td>
+                        <td style="padding: 0.75rem; border: 1px solid #ddd;">Variable</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3>🎯 Detailed Agent Specifications</h3>
+            
+            <div style="background: #fff3cd; border-left: 4px solid #FD7E14; padding: 1.5rem; margin: 1.5rem 0; border-radius: 4px;">
+                <h4 style="color: #D9480F; margin-bottom: 1rem;">TIER 1: Manager Agent (Orchestrator)</h4>
+                
+                <p style="margin-bottom: 0.5rem;"><strong>🎭 Persona:</strong> Contract Administrator & AI Project Manager</p>
+                <p style="margin-bottom: 0.5rem;"><strong>📋 Role:</strong> Central orchestrator with complete construction domain expertise</p>
+                <p style="margin-bottom: 1rem;"><strong>🎯 Responsibility:</strong> Coordinate all agents, manage workflow, enforce guardrails, interact with user</p>
+                
+                <p style="margin-bottom: 0.5rem;"><strong>📚 Instructions (System Prompt Summary):</strong></p>
+                <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
+                    <li>Load project context (contract sum, retainage rates, stakeholders, previous apps)</li>
+                    <li>Route tasks to appropriate specialist agents based on document type and workflow step</li>
+                    <li>Apply 3-tier guardrails: BLOCK (critical errors), FLAG (review needed), AUTO-FIX (minor issues)</li>
+                    <li>Create custom agents when encountering new document patterns</li>
+                    <li>Write Python code for deterministic calculations and transformations</li>
+                    <li>Provide real-time progress updates to user via chat interface</li>
+                    <li>Ask clarifying questions when agents encounter ambiguity requiring human judgment</li>
+                    <li>Maintain construction industry best practices (AIA standards, lien laws, retainage rules)</li>
+                </ul>
+                
+                <p style="margin-bottom: 0.5rem;"><strong>🛠️ Tool Set (10 tools):</strong></p>
+                <ul style="margin-left: 1.5rem; margin-bottom: 1rem; font-family: monospace; font-size: 0.9em;">
+                    <li><code>update_progress(step, pct, message)</code> - Update workflow progress and send user message</li>
+                    <li><code>invoke_specialist_agent(agent_name, task_config)</code> - Delegate task to core agent</li>
+                    <li><code>ask_user_question(question, context, options)</code> - Pause workflow for human input</li>
+                    <li><code>log_orchestrator_decision(decision, reasoning)</code> - Audit trail of routing decisions</li>
+                    <li><code>check_agent_status(agent_name)</code> - Monitor active agent execution</li>
+                    <li><code>create_custom_agent(name, persona, tools, prompt)</code> - Dynamically create specialized agent</li>
+                    <li><code>generate_python_code(task_description)</code> - Write code for deterministic tasks</li>
+                    <li><code>apply_guardrails(data, rule_type)</code> - Enforce business rules and safety checks</li>
+                    <li><code>query_sql(query_text)</code> - Browse project database for insights</li>
+                    <li><code>browse_blob_storage(container, path)</code> - Access document storage</li>
+                </ul>
+                
+                <p style="margin-bottom: 0.5rem;"><strong>🧠 Memory Access:</strong></p>
+                <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
+                    <li><strong>Project Memory (Read/Write):</strong> Contract details, stakeholder registry, CO ledger, previous app history</li>
+                    <li><strong>Agent Memory (Read/Write):</strong> Learned patterns, quality feedback history, sub-specific formats, extraction strategies</li>
+                    <li><strong>Session Memory (Read/Write):</strong> Current app state, pending questions, active agent status, user responses</li>
+                </ul>
+                
+                <p style="margin-bottom: 0.5rem;"><strong>💬 Cross-Agent Communication:</strong></p>
+                <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
+                    <li><strong>Receives from:</strong> All agents (progress reports, issues, questions, completion notices)</li>
+                    <li><strong>Sends to:</strong> Core agents (task delegation, refined prompts), Helpers (deployment requests), User (updates, questions)</li>
+                    <li><strong>Pattern:</strong> Hub-and-spoke (central coordinator, all communication flows through Manager)</li>
+                </ul>
+                
+                <p style="margin-bottom: 0.5rem;"><strong>👤 Human-in-the-Loop:</strong></p>
+                <ul style="margin-left: 1.5rem;">
+                    <li><strong>Direct User Interaction:</strong> ✅ Yes (only agent with direct user access)</li>
+                    <li><strong>When to ask:</strong> Ambiguity (duplicate detection >70% confidence), Critical decisions (math error >$10k), Conflicts (entity matching 70-90% similar)</li>
+                    <li><strong>Response handling:</strong> Pauses workflow at human gate, waits for user input, relays answer to relevant agent</li>
+                </ul>
+            </div>
+            
+            <div style="background: #E7F5FF; border-left: 4px solid #1971C2; padding: 1.5rem; margin: 1.5rem 0; border-radius: 4px;">
+                <h4 style="color: #1976D2; margin-bottom: 1rem;">TIER 2: Core Specialist Agents (Always Active)</h4>
+                
+                <h5 style="color: #1565C0; margin-top: 1rem;">🤖 Extraction Agent</h5>
+                <p style="margin-bottom: 0.5rem;"><strong>🎭 Persona:</strong> Data Extraction Specialist</p>
+                <p style="margin-bottom: 0.5rem;"><strong>📋 Role:</strong> Vision-based field extraction from payment application documents</p>
+                <p style="margin-bottom: 1rem;"><strong>🎯 Responsibility:</strong> Extract all required fields with self-validation and iterative refinement</p>
+                
+                <p style="margin-bottom: 0.5rem;"><strong>📚 Instructions:</strong></p>
+                <ul style="margin-left: 1.5rem; margin-bottom: 1rem; font-size: 0.95em;">
+                    <li>Attempt standard vision extraction on assigned pages</li>
+                    <li>Self-validate: check completeness (all required fields), confidence >85%, data types correct</li>
+                    <li>If validation fails: retry with focused extraction on missing/low-confidence fields</li>
+                    <li>If still failing: request helper (OCR for handwriting, Table Parser for complex layouts)</li>
+                    <li>After 3 attempts or confidence <75%, report to Manager for escalation</li>
+                    <li>Save results to database only after validation passes</li>
+                </ul>
+                
+                <p style="margin-bottom: 0.5rem;"><strong>🛠️ Tool Set (6 tools):</strong></p>
+                <ul style="margin-left: 1.5rem; margin-bottom: 1rem; font-family: monospace; font-size: 0.85em;">
+                    <li><code>extract_fields_from_page(package_id, page_num, fields_schema)</code></li>
+                    <li><code>extract_all_sov_pages_parallel(package_id, start_page, end_page)</code></li>
+                    <li><code>extract_with_document_intelligence(package_id, pages)</code></li>
+                    <li><code>validate_extraction(data, schema, min_confidence)</code></li>
+                    <li><code>save_extraction_result(package_id, doc_type, data)</code></li>
+                    <li><code>report_to_orchestrator(message_type, content, metadata)</code></li>
+                </ul>
+                
+                <p style="margin-bottom: 0.5rem;"><strong>🧠 Memory Access:</strong> Read: Agent Memory (learned patterns) | Write: Session Memory (current extraction)</p>
+                <p style="margin-bottom: 0.5rem;"><strong>💬 Cross-Agent Chat:</strong> → Manager (reports), → OCR/Table Parser (helper requests)</p>
+                <p style="margin-bottom: 0.5rem;"><strong>👤 Human-in-Loop:</strong> ❌ Indirect (Manager asks user if critical fields missing after 3 retries)</p>
+                
+                <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid #ccc;">
+                
+                <h5 style="color: #1565C0; margin-top: 1rem;">🔍 Quality Review Agent</h5>
+                <p style="margin-bottom: 0.5rem;"><strong>🎭 Persona:</strong> Quality Assurance Auditor</p>
+                <p style="margin-bottom: 0.5rem;"><strong>📋 Role:</strong> Business rule enforcement and data quality validation</p>
+                <p style="margin-bottom: 1rem;"><strong>🎯 Responsibility:</strong> Ensure extracted data meets quality standards and business rules</p>
+                
+                <p style="margin-bottom: 0.5rem;"><strong>📚 Instructions:</strong></p>
+                <ul style="margin-left: 1.5rem; margin-bottom: 1rem; font-size: 0.95em;">
+                    <li>Validate math equations: Contract Sum = Original + Net COs, Payment Due = Earned - Previous - Retainage</li>
+                    <li>Cross-document reconciliation: G702 totals vs G703 sum (flag if variance >$100 or >1%)</li>
+                    <li>Retainage rules: Verify correct % per contract (typically 10% until 50% complete, then 5%)</li>
+                    <li>Data quality: Check ranges (retainage 0-15%), dates (sequential, not future), formats (floats, not strings)</li>
+                    <li>Calculate overall confidence score (field completeness + math pass rate + cross-doc consistency)</li>
+                    <li>Provide feedback to Extraction Agent if issues found (refined prompts, focus areas)</li>
+                </ul>
+                
+                <p style="margin-bottom: 0.5rem;"><strong>🛠️ Tool Set (6 tools):</strong></p>
+                <ul style="margin-left: 1.5rem; margin-bottom: 1rem; font-family: monospace; font-size: 0.85em;">
+                    <li><code>validate_math_rules(gc_header, rules)</code></li>
+                    <li><code>compare_cross_documents(gc_header, gc_sov_lines)</code></li>
+                    <li><code>check_data_quality(data, quality_rules)</code></li>
+                    <li><code>calculate_confidence_score(extraction_data)</code></li>
+                    <li><code>create_verification_exception(issue_type, severity, details)</code></li>
+                    <li><code>report_to_orchestrator(message_type, content, metadata)</code></li>
+                </ul>
+                
+                <p style="margin-bottom: 0.5rem;"><strong>🧠 Memory Access:</strong> Read: Project Memory (contract rules) + Session | Write: Session Memory (exceptions)</p>
+                <p style="margin-bottom: 0.5rem;"><strong>💬 Cross-Agent Chat:</strong> → Manager (reports), ← Extraction (sends feedback), → Helpers (Math Validator, Lien Waiver)</p>
+                <p style="margin-bottom: 0.5rem;"><strong>👤 Human-in-Loop:</strong> ❌ Indirect (Manager escalates if critical errors found)</p>
+                
+                <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid #ccc;">
+                
+                <h5 style="color: #1565C0; margin-top: 1rem;">🔧 Reconciliation Agent</h5>
+                <p style="margin-bottom: 0.5rem;"><strong>🎭 Persona:</strong> Data Consistency Expert</p>
+                <p style="margin-bottom: 0.5rem;"><strong>📋 Role:</strong> Resolve conflicts and ensure entity consistency</p>
+                <p style="margin-bottom: 1rem;"><strong>🎯 Responsibility:</strong> Match entities, merge duplicates, resolve value conflicts</p>
+                
+                <p style="margin-bottom: 0.5rem;"><strong>📚 Instructions:</strong></p>
+                <ul style="margin-left: 1.5rem; margin-bottom: 1rem; font-size: 0.95em;">
+                    <li>Fuzzy match contractor names (>95% similar = auto-merge, 70-95% = ask Manager, <70% = keep separate)</li>
+                    <li>Detect duplicates: same description + contractor + amount across pages</li>
+                    <li>Resolve value conflicts: use higher-confidence source or Manager's rules</li>
+                    <li>Fill gaps: use data from related documents (e.g., contractor name from invoice → G703)</li>
+                    <li>Standardize: create canonical entity names and update all references</li>
+                </ul>
+                
+                <p style="margin-bottom: 0.5rem;"><strong>🛠️ Tool Set (5 tools):</strong></p>
+                <ul style="margin-left: 1.5rem; margin-bottom: 1rem; font-family: monospace; font-size: 0.85em;">
+                    <li><code>fuzzy_match_entities(entity1, entity2)</code> - Returns similarity score 0-1</li>
+                    <li><code>resolve_value_conflict(sources, business_rules)</code></li>
+                    <li><code>detect_duplicates(items, unique_keys)</code></li>
+                    <li><code>fill_gaps_from_related_docs(target_doc, source_docs)</code></li>
+                    <li><code>log_reconciliation_decision(decision, reasoning)</code></li>
+                </ul>
+                
+                <p style="margin-bottom: 0.5rem;"><strong>🧠 Memory Access:</strong> Read: Agent Memory (entity mappings) | Write: Agent + Session (canonical names)</p>
+                <p style="margin-bottom: 0.5rem;"><strong>💬 Cross-Agent Chat:</strong> → Manager (reports, escalations), → Previous App Comparator (historical data)</p>
+                <p style="margin-bottom: 0.5rem;"><strong>👤 Human-in-Loop:</strong> ❌ Indirect (Manager asks user for 70-95% similarity matches)</p>
+            </div>
+            
+            <div style="background: #F0FFF4; border-left: 4px solid #2B8A3E; padding: 1.5rem; margin: 1.5rem 0; border-radius: 4px;">
+                <h4 style="color: #2B8A3E; margin-bottom: 1rem;">TIER 3: Helper Agents (On-Demand)</h4>
+                <p style="font-size: 0.95em; margin-bottom: 1rem;"><em>Deployed only when needed. Single-purpose, fast, return results to requester.</em></p>
+                
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead style="background: #51CF66; color: white;">
+                        <tr>
+                            <th style="padding: 0.5rem; border: 1px solid #ddd;">Agent</th>
+                            <th style="padding: 0.5rem; border: 1px solid #ddd;">Persona</th>
+                            <th style="padding: 0.5rem; border: 1px solid #ddd;">When Deployed</th>
+                            <th style="padding: 0.5rem; border: 1px solid #ddd;">Key Tool(s)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd;">🔍 OCR Agent</td>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd;">Handwriting Recognition Specialist</td>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd;">Confidence <80% on any field, poor scan quality</td>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd; font-family: monospace; font-size: 0.85em;"><code>enhance_ocr(image)</code>, <code>recognize_handwriting(text)</code></td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 0.5rem; border: 1px solid #ddd;">📊 Table Parser</td>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd;">Complex Layout Analyst</td>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd;">Custom SOV format, merged cells, non-standard table</td>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd; font-family: monospace; font-size: 0.85em;"><code>parse_complex_table(page)</code>, <code>detect_merged_cells()</code></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd;">📐 Math Validator</td>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd;">Financial Equation Verifier</td>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd;">QA Agent requests detailed math verification</td>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd; font-family: monospace; font-size: 0.85em;"><code>verify_payment_equation()</code>, <code>calculate_retainage()</code></td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 0.5rem; border: 1px solid #ddd;">📎 Lien Waiver Validator</td>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd;">Lien Compliance Officer</td>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd;">Lien waivers attached to pay app</td>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd; font-family: monospace; font-size: 0.85em;"><code>match_waiver_amounts()</code>, <code>verify_signature()</code></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd;">📸 Stored Materials Auditor</td>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd;">Materials Verification Inspector</td>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd;">Stored materials >$0 in G703</td>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd; font-family: monospace; font-size: 0.85em;"><code>verify_photos()</code>, <code>check_contract_allowance()</code></td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 0.5rem; border: 1px solid #ddd;">📋 Previous App Comparator</td>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd;">Historical Trend Analyst</td>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd;">Reconciliation Agent needs historical context</td>
+                            <td style="padding: 0.5rem; border: 1px solid #ddd; font-family: monospace; font-size: 0.85em;"><code>compare_to_previous()</code>, <code>detect_anomalies()</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <p style="margin-top: 1rem; font-size: 0.9em;"><strong>🧠 Memory Access:</strong> Read-only Session Memory (current data) + Project Memory (contract rules for validation)</p>
+                <p style="font-size: 0.9em;"><strong>💬 Cross-Agent Chat:</strong> → Requester only (return results, no broadcast)</p>
+                <p style="font-size: 0.9em;"><strong>👤 Human-in-Loop:</strong> ❌ No direct interaction</p>
+            </div>
+            
+            <div style="background: #F3E5F5; border-left: 4px solid #5F3DC4; padding: 1.5rem; margin: 1.5rem 0; border-radius: 4px;">
+                <h4 style="color: #5F3DC4; margin-bottom: 1rem;">TIER 4: Dynamic Custom Agents (Created On-Demand)</h4>
+                
+                <p style="margin-bottom: 0.5rem;"><strong>🎭 Persona:</strong> Dynamically assigned by Manager (e.g., "QuickBooks Invoice Parser", "ABC Plumbing Format Specialist")</p>
+                <p style="margin-bottom: 0.5rem;"><strong>📋 Role:</strong> Handle non-standard document formats not covered by core agents</p>
+                <p style="margin-bottom: 1rem;"><strong>🎯 Responsibility:</strong> Extract data from custom/proprietary formats using Manager-generated prompts and tools</p>
+                
+                <p style="margin-bottom: 0.5rem;"><strong>📚 Creation Process:</strong></p>
+                <ol style="margin-left: 1.5rem; margin-bottom: 1rem;">
+                    <li>Manager encounters unfamiliar document format (e.g., ABC Plumbing always uses QuickBooks export)</li>
+                    <li>Manager analyzes document structure and generates custom extraction prompt</li>
+                    <li>Manager creates agent with: unique name, specialized persona, configured tools, custom system prompt</li>
+                    <li>Agent executes extraction and reports results to Manager</li>
+                    <li>Manager saves agent definition to Agent Registry for future reuse</li>
+                    <li>Next time same format appears: Manager invokes saved agent instead of creating new one</li>
+                </ol>
+                
+                <p style="margin-bottom: 0.5rem;"><strong>🛠️ Tool Set:</strong> Configured by Manager (subset of extraction tools + custom Python functions)</p>
+                <p style="margin-bottom: 0.5rem;"><strong>🧠 Memory Access:</strong> Configured by Manager (typically Session read-only)</p>
+                <p style="margin-bottom: 0.5rem;"><strong>💬 Cross-Agent Chat:</strong> → Manager only (reports results)</p>
+                <p style="margin-bottom: 0.5rem;"><strong>👤 Human-in-Loop:</strong> ❌ Indirect (Manager handles escalations)</p>
+                
+                <p style="margin-top: 1rem; padding: 1rem; background: white; border-radius: 4px; font-size: 0.9em;">
+                    <strong>Example Custom Agents:</strong><br>
+                    • <strong>ABC Plumbing Parser:</strong> Knows QuickBooks invoice layout, extracts line items from PDF export<br>
+                    • <strong>JV Split Parser:</strong> Handles joint venture pay apps where amounts split between multiple parties<br>
+                    • <strong>Signature Detector:</strong> Verifies authorized signatures on G702 (knows project stakeholder signatures)<br>
+                    • <strong>Custom SOV Handler:</strong> Parses non-AIA G703 formats (e.g., Excel-based SOV templates)
+                </p>
+            </div>
+            
+            <h3>📊 Visual Agent Hierarchy with Communication Flows</h3>
+            <div class="mermaid">
+graph TB
+    MANAGER["🎯 MANAGER AGENT<br/>Persona: Contract Administrator<br/>Memory: Project + Agent + Session<br/>Human-in-Loop: ✅ Direct<br/>Tools: 10"]
+    
+    EXTRACT["🤖 EXTRACTION AGENT<br/>Persona: Data Extraction Specialist<br/>Memory: Agent (R) + Session (W)<br/>Human-in-Loop: ❌ Indirect<br/>Tools: 6"]
+    
+    QA["🔍 QUALITY REVIEW AGENT<br/>Persona: QA Auditor<br/>Memory: Project + Session<br/>Human-in-Loop: ❌ Indirect<br/>Tools: 6"]
+    
+    RECON["🔧 RECONCILIATION AGENT<br/>Persona: Data Consistency Expert<br/>Memory: Agent (R/W) + Session<br/>Human-in-Loop: ❌ Indirect<br/>Tools: 5"]
+    
+    OCR["🔍 OCR<br/>Persona: Handwriting Specialist<br/>Tools: 2"]
+    TABLE["📊 Table Parser<br/>Persona: Layout Analyst<br/>Tools: 3"]
+    MATH["📐 Math Validator<br/>Persona: Equation Verifier<br/>Tools: 4"]
+    LIEN["📎 Lien Waiver<br/>Persona: Compliance Officer<br/>Tools: 3"]
+    STORED["📸 Materials Auditor<br/>Persona: Inspector<br/>Tools: 4"]
+    PREV["📋 App Comparator<br/>Persona: Trend Analyst<br/>Tools: 3"]
+    
+    CUSTOM["⚡ CUSTOM AGENTS<br/>Personas: Dynamically Assigned<br/>Memory: Manager-Configured<br/>Tools: Variable"]
+    
+    MANAGER -->|Invokes & Configures| EXTRACT
+    MANAGER -->|Invokes & Configures| QA
+    MANAGER -->|Invokes & Configures| RECON
+    MANAGER -.->|Deploys when needed| OCR
+    MANAGER -.->|Deploys when needed| TABLE
+    MANAGER -.->|Deploys when needed| MATH
+    MANAGER -.->|Deploys when needed| LIEN
+    MANAGER -.->|Deploys when needed| STORED
+    MANAGER -.->|Deploys when needed| PREV
+    MANAGER ==>|Dynamically Creates| CUSTOM
+    
+    EXTRACT -.->|Requests help| OCR
+    EXTRACT -.->|Requests help| TABLE
+    QA -.->|Requests validation| MATH
+    QA -.->|Requests validation| LIEN
+    QA -.->|Requests validation| STORED
+    RECON -.->|Requests comparison| PREV
+    
+    EXTRACT -->|Reports progress & issues| MANAGER
+    QA -->|Reports results & feedback| MANAGER
+    RECON -->|Reports decisions| MANAGER
+    OCR -->|Returns enhanced data| EXTRACT
+    TABLE -->|Returns parsed data| EXTRACT
+    MATH -->|Returns validation result| QA
+    LIEN -->|Returns compliance check| QA
+    STORED -->|Returns audit result| QA
+    PREV -->|Returns historical data| RECON
+    CUSTOM -->|Reports completion| MANAGER
+    
+    style MANAGER fill:#FF6B6B,stroke:#C92A2A,stroke-width:4px,color:#fff
+    style EXTRACT fill:#4ECDC4,stroke:#0A6A7A,stroke-width:3px,color:#fff
+    style QA fill:#4ECDC4,stroke:#0A6A7A,stroke-width:3px,color:#fff
+    style RECON fill:#4ECDC4,stroke:#0A6A7A,stroke-width:3px,color:#fff
+    style OCR fill:#95E1D3,stroke:#2C786C,stroke-width:2px
+    style TABLE fill:#95E1D3,stroke:#2C786C,stroke-width:2px
+    style MATH fill:#95E1D3,stroke:#2C786C,stroke-width:2px
+    style LIEN fill:#95E1D3,stroke:#2C786C,stroke-width:2px
+    style STORED fill:#95E1D3,stroke:#2C786C,stroke-width:2px
+    style PREV fill:#95E1D3,stroke:#2C786C,stroke-width:2px
+    style CUSTOM fill:#9775FA,stroke:#5F3DC4,stroke-width:2px,color:#fff
+            </div>
+            
+            <div class="key-points">
+                <h4>📊 Summary: Tools, Memory, & Communication by Tier:</h4>
+                <ul>
+                    <li><strong>Tier 1 (Manager - 1 agent):</strong> 10 tools | Full memory access (Project R/W, Agent R/W, Session R/W) | Central hub (all chat flows through Manager) | Direct human interaction</li>
+                    <li><strong>Tier 2 (Core - 3 agents):</strong> 5-6 tools each | Selective memory (Agent or Project read, Session write) | Reports to Manager + requests from Helpers | Indirect human (via Manager)</li>
+                    <li><strong>Tier 3 (Helpers - 6 agents):</strong> 2-4 tools each | Read-only memory (Session + Project rules) | Returns to requester only | No human interaction</li>
+                    <li><strong>Tier 4 (Custom - N agents):</strong> Variable tools | Manager-configured memory | Reports to Manager only | Indirect human (via Manager)</li>
+                </ul>
+            </div>
+            
+            <div class="key-points">
+                <h4>📊 Agent Count Summary:</h4>
+                <ul>
+                    <li><strong>1 Manager Agent (Tier 1):</strong> Orchestrator, AI Project Manager, Contract Administrator</li>
+                    <li><strong>3 Core Specialist Agents (Tier 2):</strong> Extraction, Quality Review, Reconciliation</li>
+                    <li><strong>6 Helper Agents (Tier 3):</strong> OCR, Table Parser, Math Validator, Lien Waiver, Stored Materials, Previous App Comparator</li>
+                    <li><strong>N Custom Agents (Tier 4):</strong> Created dynamically by Manager as needed, persisted for reuse</li>
+                    <li><strong>Total Standard Agents: 10</strong> (1 Manager + 3 Core + 6 Helpers)</li>
+                    <li><strong>Total with Custom: 10 + N</strong> (N grows over time as Manager learns new document patterns)</li>
+                </ul>
+            </div>
+            
+            <div class="legend">
+                <h4>🏗️ Hierarchy Explanation:</h4>
+                <div style="margin-top: 1rem; line-height: 2;">
+                    <strong>Tier 1 (Manager):</strong> Top-level orchestrator with complete domain knowledge. Makes all routing decisions. Only agent that talks to user directly.<br>
+                    <br>
+                    <strong>Tier 2 (Core Specialists):</strong> Always available. Invoked by Manager for every pay app. Self-validating, iterative, can request helpers.<br>
+                    <br>
+                    <strong>Tier 3 (Helpers):</strong> Deployed on-demand. Not invoked unless needed (e.g., OCR only for poor scans). Single-purpose, fast, report back to requester.<br>
+                    <br>
+                    <strong>Tier 4 (Custom):</strong> Created dynamically when Manager encounters new patterns. Persisted in Agent Registry. Reused across similar documents.
+                </div>
+            </div>
+            
+            <div class="key-points" style="background: #FFF4E6; border-left-color: #FD7E14;">
+                <h4 style="color: #D9480F;">🎯 Agent Responsibilities - Who Does What:</h4>
+                <ul style="color: #862E09;">
+                    <li><strong>Manager:</strong> Orchestration, project context, routing, guardrails, human interaction, code generation, agent creation</li>
+                    <li><strong>Extraction:</strong> Vision-based field extraction, self-validation, retry logic, helper requests</li>
+                    <li><strong>Quality Review:</strong> Math validation, business rules, confidence scoring, feedback generation</li>
+                    <li><strong>Reconciliation:</strong> Entity matching, duplicate detection, value conflict resolution, gap filling</li>
+                    <li><strong>OCR:</strong> Handwriting recognition, poor scan enhancement</li>
+                    <li><strong>Table Parser:</strong> Complex table structures, merged cells, custom layouts</li>
+                    <li><strong>Math Validator:</strong> Financial equation verification, retainage calculations</li>
+                    <li><strong>Lien Waiver:</strong> Waiver amount matching, signature verification</li>
+                    <li><strong>Stored Materials:</strong> Photo/receipt validation, contract allowance checks</li>
+                    <li><strong>Previous App Comparator:</strong> Historical comparison, anomaly detection, velocity checks</li>
+                </ul>
+            </div>
+            
+            <div class="key-points" style="background: #E7F3FF; border-left-color: #1971C2;">
+                <h4 style="color: #1976D2;">💡 Communication Hierarchy:</h4>
+                <ul style="color: #1565C0;">
+                    <li><strong>Manager ↔ User:</strong> Direct communication (questions, updates, progress)</li>
+                    <li><strong>Manager → Core Agents:</strong> Task delegation, configuration, routing</li>
+                    <li><strong>Core Agents → Manager:</strong> Progress reports, issues, questions, completion notices</li>
+                    <li><strong>Manager → Helpers:</strong> On-demand deployment for specific sub-tasks</li>
+                    <li><strong>Core Agents → Helpers:</strong> Direct requests (e.g., Extraction → OCR)</li>
+                    <li><strong>Helpers → Requesters:</strong> Results returned to whoever requested them</li>
+                    <li><strong>All Agents → Manager:</strong> Critical escalations, errors, human-needed decisions</li>
+                    <li><strong>No Peer-to-Peer:</strong> Agents don't talk directly to each other (except helper requests) - all coordination through Manager</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Agent Conversation Example -->
+        <div class="diagram-section">
+            <h2>5. Real-World Example - Agents Working Together</h2>
+            <div class="description">
+                <strong>Scenario:</strong> Processing Payment Application #12 for Boeing/25/BSC Site Expansion project.
+                This diagram shows actual agent conversations and collaboration as they extract, validate, and reconcile data from uploaded documents.
+                Watch how the Manager Agent orchestrates specialists, deploys helpers, handles quality feedback, and interacts with the user.
+            </div>
+            
+            <div class="mermaid">
+sequenceDiagram
+    participant User
+    participant Manager as 🎯 Manager Agent<br/>(Contract Admin)
+    participant Extract as 🤖 Extraction Agent
+    participant OCR as 🔍 OCR Helper
+    participant QA as 🔎 Quality Agent
+    participant Recon as 🔧 Reconciliation Agent
+    participant DB as 💾 Database
+    
+    Note over User,DB: User uploads 3 PDFs: GC G702/G703 + ABC Plumbing Invoice + XYZ Electrical Invoice
+    
+    User->>Manager: Start processing App #12
+    
+    Manager->>User: 📋 Processing Payment App #12<br/>Project: Boeing/25/BSC ($50M contract)
+    
+    Note over Manager: Manager loads Project Memory:<br/>- Contract Sum: $50M<br/>- Retainage: 10% until 50% complete<br/>- Current App: #12 (previous was #11)<br/>- Known subs: ABC Plumbing, XYZ Electrical
+    
+    Manager->>Extract: Extract G702 cover page (18 fields).<br/>Focus on: current_payment_due, contract_sum_to_date.<br/>Use vision extraction on page 1.
+    
+    Extract->>Extract: Vision LLM call on page 1...<br/>Extracted 17/18 fields (94% confidence)
+    
+    Extract->>Manager: ⚠️ Missing field: 'change_order_summary'<br/>Should I retry with focused extraction?
+    
+    Manager->>Extract: Yes, retry. Focus on bottom section<br/>where CO summary typically appears.
+    
+    Extract->>Extract: Focused retry on bottom-right area...<br/>Found it! "CO #3: +$1.2M, CO #4: -$50k"
+    
+    Extract->>DB: Save G702 header (18/18 fields, 96% confidence)
+    
+    Extract->>Manager: ✅ G702 complete: 18/18 fields extracted<br/>Current Payment Due: $4,523,450<br/>Contract Sum To Date: $51,150,000
+    
+    Manager->>User: ✅ G702 cover extracted (18/18 fields, 96% confidence)
+    
+    Manager->>Extract: Extract G703 continuation sheet.<br/>Pages 2-8, expect ~150-200 line items.<br/>Use parallel extraction for speed.
+    
+    Extract->>Extract: Parallel vision extraction on 7 pages...<br/>Processing pages 2-8 simultaneously...
+    
+    Note over Extract: Page 2: 24 items<br/>Page 3: 28 items<br/>Page 4: 31 items<br/>Page 5: 29 items<br/>Page 6: 27 items<br/>Page 7: 18 items<br/>Page 8: 15 items
+    
+    Extract->>Extract: Merged results: 172 line items<br/>Running self-validation...
+    
+    Extract->>Extract: ⚠️ Self-check detected issues:<br/>1. Items #45 & #127 both "Electrical rough-in"<br/>   Same contractor, same amount ($25k)<br/>2. Item #89 has confidence 72% (below 85%)
+    
+    Extract->>Manager: ⚠️ Found 2 issues during extraction:<br/>1. Possible duplicate: Items #45 & #127<br/>2. Low confidence on item #89 (handwritten qty)
+    
+    Manager->>Manager: Analyzing issues...<br/>Issue 1: Need user input (duplicate detection)<br/>Issue 2: Can auto-fix (deploy OCR helper)
+    
+    Manager->>OCR: Help with item #89 - poor handwriting.<br/>Extract quantity field from page 5.
+    
+    OCR->>OCR: Enhanced OCR + handwriting recognition...<br/>Quantity: 1,250 SF (was "1,25? SF")
+    
+    OCR->>Manager: ✅ Corrected item #89: Quantity = 1,250 SF<br/>Confidence now 94%
+    
+    Manager->>Extract: Update item #89 with OCR result
+    
+    Extract->>DB: Save 172 G703 line items (with OCR correction)
+    
+    Manager->>User: ❓ Question: Items #45 and #127 both show<br/>"Electrical rough-in" for XYZ Electrical ($25k each).<br/>Are these the same work item or separate items?<br/><br/>Context: Both on different pages (p3 & p6),<br/>same description, same contractor, same amount.
+    
+    User->>Manager: Same item - it's a duplicate entry.<br/>Please merge them into one.
+    
+    Manager->>User: Thank you! Merging duplicates...
+    
+    Manager->>Recon: Merge items #45 and #127 into single entry.<br/>Keep #45, remove #127, update totals.
+    
+    Recon->>Recon: Fuzzy matching confirms 100% match.<br/>Merging items...
+    
+    Recon->>DB: Update SOV: Remove #127, keep #45<br/>New total: 171 line items
+    
+    Recon->>Manager: ✅ Merged successfully<br/>SOV now has 171 unique line items
+    
+    Manager->>User: ✅ Duplicates merged (171 items total)
+    
+    Manager->>QA: Validate all extracted data.<br/>Check: math equations, cross-doc reconciliation,<br/>retainage rules, and data quality.
+    
+    QA->>DB: Fetch G702 header & G703 lines
+    
+    QA->>QA: Math validation:<br/>✓ Contract Sum = $50M + $1.15M COs = $51.15M ✓<br/>✓ Total Earned - Retainage = $48.2M ✓<br/>✓ Payment Due = $4,523,450 ✓
+    
+    QA->>QA: Cross-document reconciliation:<br/>G702 "Contract Sum" = $51.15M<br/>G703 Sum(Scheduled Value) = $51.18M<br/>⚠️ Variance: $30k (0.06%)
+    
+    QA->>Manager: ⚠️ Found minor variance:<br/>G702 vs G703 scheduled value diff = $30k (0.06%)<br/>Within acceptable range (<0.1%) - recommend FLAG
+    
+    Manager->>Manager: Applying guardrails...<br/>$30k variance = 0.06% → TIER 2: FLAG<br/>Action: Document exception, allow proceed
+    
+    Manager->>DB: Log exception: "Minor G702/G703 variance"<br/>Severity: LOW, Auto-approved per guardrails
+    
+    QA->>QA: Retainage validation:<br/>Contract says 10% until 50% complete<br/>Project is 47% complete (per G702)<br/>Extracted retainage: 10% ✓ Correct!
+    
+    QA->>QA: Data quality checks:<br/>✓ All monetary values are floats<br/>✓ Percentages in 0-1 range<br/>✓ Dates are valid and sequential<br/>✓ No negative values where illogical
+    
+    QA->>QA: Confidence calculation:<br/>Field completeness: 100%<br/>Math validation: 100% pass<br/>Cross-doc variance: <0.1%<br/>Data quality: 98% pass<br/>━━━━━━━━━━━━━━<br/>Overall Confidence: 98%
+    
+    QA->>Manager: ✅ Validation complete!<br/>• Math: All equations pass<br/>• Cross-doc: 0.06% variance (flagged, acceptable)<br/>• Retainage: Correct per contract<br/>• Data quality: 98%<br/>• Overall confidence: 98%<br/>Recommendation: APPROVE for review
+    
+    Manager->>User: ✅ Processing complete!<br/>━━━━━━━━━━━━━━━━━━<br/>📊 Summary:<br/>• G702 Cover: 18/18 fields (96% confidence)<br/>• G703 SOV: 171 line items (98% confidence)<br/>• Current Payment Due: $4,523,450<br/>• Contract Sum To Date: $51,150,000<br/>• Issues Resolved: 2 (duplicate merged, OCR correction)<br/>• Quality Score: 98%<br/>━━━━━━━━━━━━━━━━━━<br/>Ready for your review!
+    
+    User->>Manager: Looks good! Export to Excel.
+    
+    Manager->>DB: Generate Excel export with all data
+    
+    Manager->>User: ✅ Exported! Download ready.<br/>App #12 processing complete. 🎉
+            </div>
+            
+            <div class="key-points">
+                <h4>🎯 What Happened in This Example:</h4>
+                <ul>
+                    <li><strong>Manager Agent:</strong> Orchestrated the entire workflow, loaded project context, made routing decisions</li>
+                    <li><strong>Extraction Agent:</strong> Self-validated work, detected issues (missing field, duplicate, low confidence), requested help</li>
+                    <li><strong>OCR Helper:</strong> Deployed by Manager to fix low-confidence handwritten field</li>
+                    <li><strong>Reconciliation Agent:</strong> Merged duplicate entries after user confirmation</li>
+                    <li><strong>Quality Agent:</strong> Validated math, cross-doc reconciliation, retainage rules, calculated confidence</li>
+                    <li><strong>Manager Guardrails:</strong> Auto-approved minor variance ($30k/0.06%) per TIER 2 rules</li>
+                    <li><strong>Human-in-the-Loop:</strong> User answered duplicate question, Manager immediately applied response</li>
+                    <li><strong>Live Updates:</strong> User received real-time progress updates throughout</li>
+                </ul>
+            </div>
+            
+            <div class="legend">
+                <h4>📋 Step-by-Step Summary:</h4>
+                <div style="margin-top: 1rem; line-height: 2;">
+                    <strong>Step 1:</strong> User uploads 3 PDFs (GC pay app + 2 sub invoices) → Manager starts workflow<br>
+                    <strong>Step 2:</strong> Manager loads project memory (contract details, previous apps, known subs)<br>
+                    <strong>Step 3:</strong> Manager → Extraction Agent: "Extract G702 cover (18 fields)"<br>
+                    <strong>Step 4:</strong> Extraction Agent extracts page 1 → finds 17/18 fields → asks Manager to retry<br>
+                    <strong>Step 5:</strong> Manager approves retry → Extraction Agent finds missing field → Saves 18/18 to DB<br>
+                    <strong>Step 6:</strong> Manager → Extraction Agent: "Extract G703 SOV (pages 2-8, parallel)"<br>
+                    <strong>Step 7:</strong> Extraction Agent processes 7 pages simultaneously → finds 172 items<br>
+                    <strong>Step 8:</strong> Extraction Agent self-validates → detects 2 issues (duplicate + low confidence)<br>
+                    <strong>Step 9:</strong> Extraction Agent → Manager: "Found duplicate items + handwriting issue"<br>
+                    <strong>Step 10:</strong> Manager analyzes → deploys OCR Helper for handwriting issue<br>
+                    <strong>Step 11:</strong> OCR Helper corrects item #89 → confidence jumps 72% → 94%<br>
+                    <strong>Step 12:</strong> Manager → User: "Are items #45 & #127 duplicates?" (human gate paused)<br>
+                    <strong>Step 13:</strong> User → Manager: "Yes, merge them"<br>
+                    <strong>Step 14:</strong> Manager → Reconciliation Agent: "Merge items #45 & #127"<br>
+                    <strong>Step 15:</strong> Reconciliation Agent merges → updates DB → 171 items total<br>
+                    <strong>Step 16:</strong> Manager → Quality Agent: "Validate all data"<br>
+                    <strong>Step 17:</strong> Quality Agent validates math → all equations pass ✓<br>
+                    <strong>Step 18:</strong> Quality Agent cross-checks G702 vs G703 → finds $30k variance (0.06%)<br>
+                    <strong>Step 19:</strong> Quality Agent → Manager: "Minor variance, within acceptable range"<br>
+                    <strong>Step 20:</strong> Manager applies Tier 2 guardrails → auto-approves (logs exception)<br>
+                    <strong>Step 21:</strong> Quality Agent checks retainage → 10% correct per contract ✓<br>
+                    <strong>Step 22:</strong> Quality Agent calculates overall confidence → 98%<br>
+                    <strong>Step 23:</strong> Quality Agent → Manager: "All validations pass, 98% confidence, recommend approve"<br>
+                    <strong>Step 24:</strong> Manager → User: "Processing complete! 98% confidence, ready for review"<br>
+                    <strong>Step 25:</strong> User approves → Manager exports to Excel → Workflow complete 🎉
+                </div>
+            </div>
+            
+            <div class="key-points" style="background: #E7F3FF; border-left-color: #1971C2;">
+                <h4 style="color: #1976D2;">💡 Key Insights from This Example:</h4>
+                <ul style="color: #1565C0;">
+                    <li><strong>Agent Autonomy:</strong> Extraction Agent self-detected issues and requested retry without hardcoded rules</li>
+                    <li><strong>Manager Intelligence:</strong> Decided to auto-fix one issue (OCR) vs ask user for other (duplicate)</li>
+                    <li><strong>Helper Deployment:</strong> OCR Helper deployed on-demand, not pre-configured in workflow</li>
+                    <li><strong>Quality Feedback:</strong> QA Agent didn't just flag issues—provided context (0.06% variance acceptable)</li>
+                    <li><strong>Guardrail Application:</strong> Manager applied 3-tier rules automatically ($30k → Tier 2 FLAG → Auto-approve)</li>
+                    <li><strong>Construction Knowledge:</strong> Manager knew retainage should be 10% at 47% completion per contract</li>
+                    <li><strong>User Partnership:</strong> Only one question asked (duplicate) - everything else handled autonomously</li>
+                    <li><strong>End-to-End Time:</strong> ~45 seconds for complete processing (not shown in diagram)</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Orchestrator Detail -->
+        <div class="diagram-section">
+            <h2>6. Orchestrator Agent - The Engagement Manager</h2>
+            <div class="description">
+                The orchestrator coordinates all workflow activities, manages human interaction, and routes tasks to specialist agents.
+                It monitors progress, handles escalations, and provides real-time updates to the user.
+            </div>
+            
+            <div class="mermaid">
+graph LR
+    subgraph "Orchestrator Responsibilities"
+        direction TB
+        A[Workflow<br/>Management] 
+        B[Agent<br/>Coordination]
+        C[Human<br/>Interaction]
+        D[Quality<br/>Oversight]
+        E[Progress<br/>Communication]
+    end
+    
+    subgraph "Orchestrator Tools"
+        direction TB
+        T1[update_progress]
+        T2[invoke_specialist_agent]
+        T3[ask_user_question]
+        T4[log_orchestrator_decision]
+        T5[check_agent_status]
+        T6[finalize_workflow]
+    end
+    
+    subgraph "Communication Channels"
+        direction TB
+        U1[User Chat Window]
+        U2[Progress Bar UI]
+        U3[Question Prompts]
+    end
+    
+    A --> T1
+    A --> T4
+    B --> T2
+    B --> T5
+    C --> T3
+    E --> T1
+    D --> T2
+    D --> T3
+    
+    T1 --> U2
+    T2 --> Agent[Specialist Agents]
+    T3 --> U1
+    T3 --> U3
+    T4 --> Log[(Audit Log)]
+    E --> U1
+    
+    style A fill:#FF6B6B,stroke:#C92A2A,stroke-width:2px,color:#fff
+    style B fill:#FF6B6B,stroke:#C92A2A,stroke-width:2px,color:#fff
+    style C fill:#FF6B6B,stroke:#C92A2A,stroke-width:2px,color:#fff
+    style D fill:#FF6B6B,stroke:#C92A2A,stroke-width:2px,color:#fff
+    style E fill:#FF6B6B,stroke:#C92A2A,stroke-width:2px,color:#fff
+            </div>
+            
+            <div class="key-points">
+                <h4>🎯 Key Characteristics:</h4>
+                <ul>
+                    <li><strong>ReAct Pattern:</strong> Uses create_react_agent for dynamic routing decisions</li>
+                    <li><strong>Stateful:</strong> Maintains workflow state across all nodes and agents</li>
+                    <li><strong>Event-Driven:</strong> Responds to agent reports and user inputs</li>
+                    <li><strong>Temperature: 0.2</strong> - Some creativity for natural user communication</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Specialist Agents -->
+        <div class="diagram-section">
+            <h2>7. Specialist Agents - Domain Experts</h2>
+            <div class="description">
+                Three specialist agents handle complex tasks requiring reasoning, iteration, and self-validation.
+                Each agent has deep expertise in its domain and can retry strategies until quality thresholds are met.
+            </div>
+            
+            <div class="mermaid">
+graph TB
+    subgraph "Extraction Agent"
+        direction LR
+        E1[Document<br/>Extraction] --> E2[Self-<br/>Validation]
+        E2 --> E3{Quality<br/>Check}
+        E3 -->|Pass| E4[Save Results]
+        E3 -->|Fail| E5[Retry Strategy]
+        E5 --> E1
+        E4 --> E6[Report to<br/>Orchestrator]
+    end
+    
+    subgraph "Verification Agent"
+        direction LR
+        V1[Math<br/>Validation] --> V2[Cross-Doc<br/>Reconciliation]
+        V2 --> V3[Data Quality<br/>Checks]
+        V3 --> V4{Issues<br/>Found?}
+        V4 -->|Yes| V5[Create<br/>Exceptions]
+        V4 -->|No| V6[Calculate<br/>Confidence]
+        V5 --> V7[Report to<br/>Orchestrator]
+        V6 --> V7
+    end
+    
+    subgraph "Reconciliation Agent"
+        direction LR
+        R1[Entity<br/>Resolution] --> R2[Fuzzy<br/>Matching]
+        R2 --> R3{Confidence<br/>>90%?}
+        R3 -->|Yes| R4[Auto-Merge]
+        R3 -->|No| R5[Escalate to<br/>Orchestrator]
+        R4 --> R6[Report to<br/>Orchestrator]
+        R5 --> R6
+    end
+    
+    style E1 fill:#4ECDC4,stroke:#0A6A7A,stroke-width:2px,color:#fff
+    style V1 fill:#4ECDC4,stroke:#0A6A7A,stroke-width:2px,color:#fff
+    style R1 fill:#4ECDC4,stroke:#0A6A7A,stroke-width:2px,color:#fff
+    style E6 fill:#FFA07A,stroke:#FF6347,stroke-width:2px
+    style V7 fill:#FFA07A,stroke:#FF6347,stroke-width:2px
+    style R6 fill:#FFA07A,stroke:#FF6347,stroke-width:2px
+            </div>
+            
+            <div class="key-points">
+                <h4>🎯 Agent Design Principles:</h4>
+                <ul>
+                    <li><strong>Single Responsibility:</strong> Each agent focuses on one domain (extract, verify, reconcile)</li>
+                    <li><strong>Self-Validating:</strong> Agents check their own work before reporting complete</li>
+                    <li><strong>Iterative:</strong> Can retry with different strategies until quality threshold met</li>
+                    <li><strong>Temperature: 0.0</strong> - Deterministic for data extraction/validation tasks</li>
+                    <li><strong>Escalation-Aware:</strong> Know when to ask orchestrator for help vs solve independently</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Workflow Sequence -->
+        <div class="diagram-section">
+            <h2>8. Workflow Sequence - End-to-End Process</h2>
+            <div class="description">
+                Detailed sequence showing how orchestrator delegates to agents and manages human interaction throughout the payment application processing lifecycle.
+            </div>
+            
+            <div class="mermaid">
+sequenceDiagram
+    participant User
+    participant UI as User Chat Window
+    participant Orch as Orchestrator Agent
+    participant Ingest as Ingest Node
+    participant Class as Classification Node
+    participant Extract as Extraction Agent
+    participant Verify as Verification Agent
+    participant Recon as Reconciliation Agent
+    participant Human as Human Gate
+    participant DB as Database
+    
+    User->>UI: Upload 3 PDFs
+    UI->>Orch: Start workflow
+    
+    Orch->>UI: 📄 Processing 3 documents... (5%)
+    Orch->>Ingest: Delegate ingestion
+    Ingest->>DB: Convert PDFs to page images
+    Ingest->>Orch: Complete (15 pages generated)
+    
+    Orch->>UI: 🔍 Classifying documents... (25%)
+    Orch->>Class: Delegate classification
+    Class->>Orch: GC Pay App, 2 Sub Invoices
+    
+    Orch->>UI: 📋 Extracting G702 cover (18 fields)... (30%)
+    Orch->>Extract: Extract cover page
+    Extract->>Extract: Vision extraction attempt 1
+    Extract->>Extract: Self-validation: 17/18 fields
+    Extract->>Extract: Retry focused extraction
+    Extract->>DB: Save 18 fields (94% confidence)
+    Extract->>Orch: ✅ Complete: 18/18 fields
+    
+    Orch->>UI: 📋 Extracting G703 SOV (pages 2-8)... (45%)
+    Orch->>Extract: Extract continuation sheet
+    Extract->>Extract: Parallel extraction 7 pages
+    Extract->>Extract: Found 172 line items
+    Extract->>Extract: ⚠️ Detected duplicate items #45, #127
+    Extract->>Orch: Issue: Possible duplicate "Electrical rough-in"
+    
+    Orch->>UI: ❓ Are items #45 and #127 the same? (paused)
+    Orch->>Human: Interrupt for user input
+    Human-->>User: Show question with options
+    User->>Human: "Same item (merge)"
+    Human->>Orch: User response received
+    
+    Orch->>Recon: Merge duplicate items
+    Recon->>DB: Update SOV (171 items)
+    Recon->>Orch: ✅ Merged successfully
+    
+    Orch->>UI: ✅ Continuing... (60%)
+    Orch->>Verify: Validate all data
+    Verify->>Verify: Math validation
+    Verify->>Verify: Cross-doc reconciliation
+    Verify->>Verify: Confidence: 98%
+    Verify->>Orch: ✅ All checks pass
+    
+    Orch->>UI: ✅ Complete! View results (100%)
+    Orch->>User: Ready for review
+            </div>
+        </div>
+        
+        <!-- Agent Communication -->
+        <div class="diagram-section">
+            <h2>9. Agent Communication Pattern</h2>
+            <div class="description">
+                Shows how agents communicate through shared state, report progress, and escalate issues to the orchestrator for human decision-making.
+            </div>
+            
+            <div class="mermaid">
+graph TB
+    subgraph "Shared State (PayAppState)"
+        STATE[package_id<br/>current_step<br/>progress_pct<br/>agent_messages<br/>pending_questions<br/>extraction_results<br/>issues<br/>user_responses]
+    end
+    
+    subgraph "Agent to Orchestrator Communication"
+        direction LR
+        A1[Progress<br/>Update] 
+        A2[Issue<br/>Report]
+        A3[Question<br/>Escalation]
+        A4[Completion<br/>Notice]
+    end
+    
+    subgraph "Orchestrator to User Communication"
+        direction LR
+        U1[Progress<br/>Messages]
+        U2[Status<br/>Updates]
+        U3[Questions<br/>for User]
+        U4[Issue<br/>Summaries]
+    end
+    
+    EXTRACT[Extraction Agent] -->|report_to_orchestrator| A2
+    VERIFY[Verification Agent] -->|report_to_orchestrator| A4
+    RECON[Reconciliation Agent] -->|report_to_orchestrator| A3
+    
+    A1 --> STATE
+    A2 --> STATE
+    A3 --> STATE
+    A4 --> STATE
+    
+    STATE --> ORCH{Orchestrator<br/>Agent}
+    
+    ORCH -->|update_progress| U1
+    ORCH -->|send message| U2
+    ORCH -->|ask_user_question| U3
+    ORCH -->|format issue| U4
+    
+    U1 --> CHAT[User Chat<br/>Window]
+    U2 --> CHAT
+    U3 --> CHAT
+    U4 --> CHAT
+    
+    CHAT -->|user input| HUMAN[Human Gate]
+    HUMAN -->|user_responses| STATE
+    
+    style STATE fill:#E3F2FD,stroke:#1976D2,stroke-width:3px
+    style ORCH fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
+    style EXTRACT fill:#4ECDC4,stroke:#0A6A7A,stroke-width:2px,color:#fff
+    style VERIFY fill:#4ECDC4,stroke:#0A6A7A,stroke-width:2px,color:#fff
+    style RECON fill:#4ECDC4,stroke:#0A6A7A,stroke-width:2px,color:#fff
+    style CHAT fill:#FFD93D,stroke:#F59F00,stroke-width:2px
+            </div>
+            
+            <div class="key-points">
+                <h4>🎯 Communication Flow:</h4>
+                <ul>
+                    <li><strong>Shared State:</strong> All agents read from and write to PayAppState (LangGraph managed)</li>
+                    <li><strong>Agent Messages:</strong> Append-only log of all agent activities and reports</li>
+                    <li><strong>Pending Questions:</strong> Queue of questions awaiting user response</li>
+                    <li><strong>User Responses:</strong> Dictionary mapping question IDs to user answers</li>
+                    <li><strong>Real-Time Updates:</strong> Orchestrator sends progress to UI chat window</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Tool Architecture -->
+        <div class="diagram-section">
+            <h2>10. Agent Tool Architecture</h2>
+            <div class="description">
+                Each agent has access to a curated set of tools tailored to its responsibilities. Tools are implemented as Python functions decorated with @tool.
+            </div>
+            
+            <div class="mermaid">
+graph LR
+    subgraph "Orchestrator Tools"
+        OT1[update_progress]
+        OT2[invoke_specialist_agent]
+        OT3[ask_user_question]
+        OT4[log_orchestrator_decision]
+        OT5[check_agent_status]
+        OT6[finalize_workflow]
+    end
+    
+    subgraph "Extraction Agent Tools"
+        ET1[extract_fields_from_page]
+        ET2[extract_all_sov_pages_parallel]
+        ET3[extract_with_document_intelligence]
+        ET4[validate_extraction]
+        ET5[save_extraction_result]
+        ET6[report_to_orchestrator]
+    end
+    
+    subgraph "Verification Agent Tools"
+        VT1[validate_math_rules]
+        VT2[compare_cross_documents]
+        VT3[check_data_quality]
+        VT4[calculate_confidence_score]
+        VT5[create_verification_exception]
+        VT6[report_to_orchestrator]
+    end
+    
+    subgraph "Reconciliation Agent Tools"
+        RT1[fuzzy_match_entities]
+        RT2[resolve_value_conflict]
+        RT3[detect_duplicates]
+        RT4[fill_gaps_from_related_docs]
+        RT5[log_reconciliation_decision]
+        RT6[report_to_orchestrator]
+    end
+    
+    subgraph "Shared Infrastructure"
+        DB[(Database)]
+        BLOB[(Blob Storage)]
+        LLM[Azure OpenAI<br/>GPT-4o]
+        LOG[(Activity Log)]
+    end
+    
+    OT2 -.->|invokes| ET1
+    OT2 -.->|invokes| VT1
+    OT2 -.->|invokes| RT1
+    
+    ET1 --> LLM
+    ET2 --> LLM
+    ET3 --> LLM
+    ET5 --> DB
+    ET6 --> LOG
+    
+    VT1 --> DB
+    VT2 --> DB
+    VT5 --> DB
+    VT6 --> LOG
+    
+    RT1 -.->|uses| LLM
+    RT2 --> DB
+    RT3 --> DB
+    RT6 --> LOG
+    
+    style OT1 fill:#FF6B6B,color:#fff
+    style OT2 fill:#FF6B6B,color:#fff
+    style OT3 fill:#FF6B6B,color:#fff
+    style ET1 fill:#4ECDC4,color:#fff
+    style ET2 fill:#4ECDC4,color:#fff
+    style VT1 fill:#4ECDC4,color:#fff
+    style VT2 fill:#4ECDC4,color:#fff
+    style RT1 fill:#4ECDC4,color:#fff
+    style RT2 fill:#4ECDC4,color:#fff
+            </div>
+        </div>
+        
+        <!-- State Machine -->
+        <div class="diagram-section">
+            <h2>11. LangGraph State Machine - Workflow Steps</h2>
+            <div class="description">
+                The orchestrator uses current_step to track workflow progress and route to appropriate nodes/agents.
+            </div>
+            
+            <div class="mermaid">
+stateDiagram-v2
+    [*] --> start
+    
+    start --> ingest_complete: Orchestrator delegates to Ingest Node
+    ingest_complete --> classify_complete: Orchestrator delegates to Classification
+    classify_complete --> extract_cover: Orchestrator delegates to Extraction Agent
+    extract_cover --> extract_sov: G702 complete
+    extract_sov --> extract_complete: G703 complete
+    
+    extract_complete --> verify_complete: Orchestrator delegates to Verification Agent
+    verify_complete --> reconcile_complete: Orchestrator delegates to Reconciliation Agent
+    
+    reconcile_complete --> finalize: No issues found
+    
+    extract_complete --> human_input_needed: Issues found
+    verify_complete --> human_input_needed: Critical errors
+    reconcile_complete --> human_input_needed: Conflicts need user input
+    
+    human_input_needed --> extract_complete: User resolved extraction issue
+    human_input_needed --> verify_complete: User resolved verification issue
+    human_input_needed --> reconcile_complete: User resolved reconciliation issue
+    
+    finalize --> [*]: Workflow complete
+    
+    note right of start
+        progress_pct: 0%
+        workflow_status: in_progress
+    end note
+    
+    note right of extract_complete
+        progress_pct: 60%
+        All extraction done
+    end note
+    
+    note right of human_input_needed
+        workflow_status: awaiting_user
+        LangGraph interrupt gate
+    end note
+    
+    note right of finalize
+        progress_pct: 100%
+        workflow_status: completed
+    end note
+            </div>
+        </div>
+        
+        <!-- Human in the Loop -->
+        <div class="diagram-section">
+            <h2>12. Human-in-the-Loop Pattern</h2>
+            <div class="description">
+                When agents encounter ambiguity or conflicts they cannot auto-resolve, they escalate to the orchestrator, which pauses the workflow and asks the user for guidance.
+            </div>
+            
+            <div class="mermaid">
+graph TB
+    START[Agent Working] --> CHECK{Can Auto-Resolve?}
+    
+    CHECK -->|Yes<br/>Confidence >95%| RESOLVE[Auto-Resolve<br/>fuzzy_match_entities<br/>resolve_value_conflict]
+    RESOLVE --> LOG[Log Decision<br/>Continue Workflow]
+    
+    CHECK -->|No<br/>Confidence 70-90%| ESCALATE[Escalate to Orchestrator<br/>report_to_orchestrator]
+    
+    ESCALATE --> ORCH[Orchestrator Reviews]
+    ORCH --> DECISION{Critical?}
+    
+    DECISION -->|Yes<br/>Must resolve now| ASK[ask_user_question<br/>Format user-friendly prompt]
+    DECISION -->|No<br/>Can proceed| FLAG[Flag for Manual Review<br/>Continue workflow]
+    
+    ASK --> GATE[Human Gate Node<br/>LangGraph interrupt]
+    GATE --> PAUSE[Workflow Paused<br/>workflow_status: awaiting_user]
+    
+    PAUSE --> WAIT[Wait for User Response<br/>Checkpointed in PostgreSQL]
+    WAIT --> RESPONSE[User Responds via UI]
+    
+    RESPONSE --> RESUME[Orchestrator Receives Response<br/>workflow_status: in_progress]
+    RESUME --> RELAY[Relay Answer to Agent<br/>via state.user_responses]
+    
+    RELAY --> AGENT[Agent Processes Response<br/>Continues task]
+    AGENT --> LOG
+    
+    FLAG --> LOG
+    LOG --> CONTINUE[Workflow Continues]
+    
+    style CHECK fill:#FFD93D,stroke:#F59F00,stroke-width:2px
+    style DECISION fill:#FFD93D,stroke:#F59F00,stroke-width:2px
+    style GATE fill:#FFD93D,stroke:#F59F00,stroke-width:3px
+    style PAUSE fill:#FF6B6B,stroke:#C92A2A,stroke-width:2px,color:#fff
+    style ORCH fill:#FF6B6B,stroke:#C92A2A,stroke-width:2px,color:#fff
+    style AGENT fill:#4ECDC4,stroke:#0A6A7A,stroke-width:2px,color:#fff
+            </div>
+            
+            <div class="key-points">
+                <h4>🎯 Escalation Thresholds:</h4>
+                <ul>
+                    <li><strong>Auto-Resolve:</strong> Confidence >95%, value difference <$50, fuzzy match >95%</li>
+                    <li><strong>Flag for Review:</strong> Non-critical issues, can proceed with documented exception</li>
+                    <li><strong>Pause for User:</strong> Confidence 70-90%, value difference >$100, duplicate detection uncertain</li>
+                    <li><strong>Error State:</strong> Critical field missing, extraction failed after 3 retries</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Cost and Performance -->
+        <div class="diagram-section">
+            <h2>13. Cost & Performance Characteristics</h2>
+            <div class="description">
+                Breakdown of LLM calls and cost per workflow execution. Agents use ReAct loops, so each agent task involves 3-8 LLM calls.
+            </div>
+            
+            <div class="mermaid">
+graph LR
+    subgraph "Cost per Package Processing"
+        direction TB
+        
+        subgraph "Deterministic Nodes (No LLM cost)"
+            INGEST[Ingest: $0.00<br/>PDF → Images]
+            CLASS[Classification: $0.00<br/>Heuristic cascade]
+            FINAL[Finalize: $0.00<br/>Prepare UI]
+        end
+        
+        subgraph "Orchestrator Agent"
+            ORCH_COST[5-8 LLM calls<br/>$0.30-0.50 per package<br/>Temperature: 0.2]
+        end
+        
+        subgraph "Extraction Agent"
+            EXTRACT_COST[G702: 3-5 calls → $0.15-0.25<br/>G703: 5-8 calls → $0.50-0.80<br/>Temperature: 0.0]
+        end
+        
+        subgraph "Verification Agent"
+            VERIFY_COST[3-5 LLM calls<br/>$0.15-0.25 per package<br/>Temperature: 0.0]
+        end
+        
+        subgraph "Reconciliation Agent"
+            RECON_COST[2-4 LLM calls<br/>$0.10-0.20 per package<br/>Temperature: 0.0]
+        end
+        
+        TOTAL[Total: $1.20-2.00<br/>per package<br/>Processing time: 30-60 sec]
+    end
+    
+    ORCH_COST --> TOTAL
+    EXTRACT_COST --> TOTAL
+    VERIFY_COST --> TOTAL
+    RECON_COST --> TOTAL
+    
+    style INGEST fill:#95E1D3,stroke:#2C786C
+    style CLASS fill:#95E1D3,stroke:#2C786C
+    style FINAL fill:#95E1D3,stroke:#2C786C
+    style TOTAL fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
+            </div>
+            
+            <div class="key-points">
+                <h4>💰 Cost Optimization Strategies:</h4>
+                <ul>
+                    <li><strong>Deterministic First:</strong> Ingest and Classification use no LLM (heuristics + regex)</li>
+                    <li><strong>Parallel Execution:</strong> G703 extracts 7 pages simultaneously (15 sec total, not 7×15=105 sec)</li>
+                    <li><strong>Targeted Retries:</strong> Only retry missing/low-confidence fields, not entire documents</li>
+                    <li><strong>Temperature Tuning:</strong> 0.0 for data tasks (deterministic), 0.2 for orchestrator (natural language)</li>
+                    <li><strong>Caching:</strong> Page images and OCR results cached in blob storage</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Architecture Summary -->
+        <div class="diagram-section">
+            <h2>14. Architecture Decision Summary</h2>
+            
+            <h3>✅ What Makes This a True Multi-Agent System:</h3>
+            <div class="description">
+                <strong>1. Supervisor Pattern:</strong> Orchestrator coordinates specialist agents, not a flat peer-to-peer network<br>
+                <strong>2. Agent Specialization:</strong> Each agent has deep expertise in one domain (extract, verify, reconcile)<br>
+                <strong>3. Self-Validation:</strong> Agents check their own work and retry until quality thresholds met<br>
+                <strong>4. Dynamic Routing:</strong> Orchestrator uses LLM reasoning to decide which agent to invoke when<br>
+                <strong>5. Human-in-the-Loop:</strong> Seamless escalation when agents need human judgment<br>
+                <strong>6. Shared State:</strong> LangGraph manages PayAppState across all agents and nodes<br>
+                <strong>7. Auditability:</strong> Complete log of agent decisions, user responses, and workflow state changes
+            </div>
+            
+            <h3>🎯 When to Use Agents vs Deterministic Nodes:</h3>
+            <div class="description">
+                <strong>Use Agents (ReAct Pattern) When:</strong>
+                <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+                    <li>Task requires multi-step reasoning (Extraction: try strategy A, if fails try B)</li>
+                    <li>Unknown number of iterations needed (keep extracting until confidence >85%)</li>
+                    <li>Need to choose between multiple tools dynamically (vision vs OCR vs Document Intelligence)</li>
+                    <li>Task complexity varies by input (some documents easy, some need multiple retries)</li>
+                </ul>
+                
+                <strong>Use Deterministic Nodes When:</strong>
+                <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+                    <li>Fixed algorithmic logic (PDF → convert to images, always same process)</li>
+                    <li>Simple classification (3-tier cascade: heuristics → text LLM → vision LLM)</li>
+                    <li>Math validation (check if A + B = C, deterministic Python)</li>
+                    <li>Data formatting (prepare JSON for UI, no reasoning needed)</li>
+                </ul>
+            </div>
+            
+            <h3>📊 Architecture Metrics:</h3>
+            <div class="description">
+                <strong>LangGraph Topology:</strong>
+                <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+                    <li>1 Orchestrator Agent (supervisor)</li>
+                    <li>3 Specialist Agents (extraction, verification, reconciliation)</li>
+                    <li>3 Deterministic Nodes (ingest, classification, finalize)</li>
+                    <li>1 Human Gate (interrupt before human input)</li>
+                    <li>Total Nodes: 8</li>
+                </ul>
+                
+                <strong>Agent Characteristics:</strong>
+                <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+                    <li>ReAct Pattern: All 4 agents use create_react_agent</li>
+                    <li>Temperature: 0.0 for data tasks, 0.2 for orchestrator communication</li>
+                    <li>Tools per Agent: 5-6 specialized tools each</li>
+                    <li>LLM Calls per Agent Task: 3-8 calls (ReAct loop)</li>
+                </ul>
+                
+                <strong>State Management:</strong>
+                <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+                    <li>Shared State Schema: PayAppState (TypedDict)</li>
+                    <li>Checkpointing: PostgreSQL (LangGraph checkpointer)</li>
+                    <li>Message Log: Append-only agent_messages list</li>
+                    <li>Human Interaction: pending_questions + user_responses dictionaries</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- PART 3: PRODUCTION IMPLEMENTATION PATTERNS -->
+        <div style="text-align: center; padding: 2rem; margin-top: 4rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px;">
+            <h1 style="margin: 0; font-size: 2.5rem;">⚙️ PART 3: Production Implementation</h1>
+            <p style="margin: 0.5rem 0 0 0; font-size: 1.2rem; opacity: 0.9;">Industry Best Practices & Architectural Patterns</p>
+        </div>
+        
+        <!-- Fault Tolerance & Recovery -->
+        <div class="diagram-section">
+            <h2>15. Fault Tolerance & Recovery Strategy</h2>
+            <div class="description">
+                <strong>LangGraph PostgreSQL Checkpointing:</strong> Automatic state persistence after every agent node execution. 
+                Enables crash recovery, workflow replay, and complete audit trails without custom code.
+            </div>
+            
+            <div class="mermaid">
+graph TB
+    subgraph "Normal Workflow Execution"
+        START[User Uploads PDFs] --> CP1[Checkpoint 1: Upload Complete]
+        CP1 --> MANAGER1[Manager Node Executes]
+        MANAGER1 --> CP2[Checkpoint 2: Manager Decision Saved]
+        CP2 --> EXTRACT[Extraction Node Executes]
+        EXTRACT --> CP3[Checkpoint 3: Extraction Complete]
+        CP3 --> QUALITY[Quality Node Executes]
+        QUALITY --> CP4[Checkpoint 4: Quality Complete]
+        CP4 --> RECON[Reconciliation Executes]
+        RECON --> CP5[Checkpoint 5: Final State]
+    end
+    
+    subgraph "Crash Recovery Flow"
+        CRASH[❌ System Crash at Quality Node] --> DETECT[Detect Incomplete Workflow]
+        DETECT --> LOAD[Load Checkpoint 3 from PostgreSQL]
+        LOAD --> RESUME[Resume from Quality Node]
+        RESUME --> CONTINUE[Continue to Completion]
+    end
+    
+    CP3 -.->|Crash occurs here| CRASH
+    
+    style START fill:#4ECDC4,stroke:#0A6A7A,stroke-width:2px,color:#fff
+    style CP1 fill:#51CF66,stroke:#2B8A3E,stroke-width:2px,color:#fff
+    style CP2 fill:#51CF66,stroke:#2B8A3E,stroke-width:2px,color:#fff
+    style CP3 fill:#51CF66,stroke:#2B8A3E,stroke-width:2px,color:#fff
+    style CP4 fill:#51CF66,stroke:#2B8A3E,stroke-width:2px,color:#fff
+    style CP5 fill:#51CF66,stroke:#2B8A3E,stroke-width:2px,color:#fff
+    style CRASH fill:#FA5252,stroke:#C92A2A,stroke-width:3px,color:#fff
+    style LOAD fill:#FFD93D,stroke:#F59F00,stroke-width:2px
+    style RESUME fill:#4ECDC4,stroke:#0A6A7A,stroke-width:2px,color:#fff
+    style CONTINUE fill:#51CF66,stroke:#2B8A3E,stroke-width:2px,color:#fff
+            </div>
+            
+            <div class="key-points">
+                <h4>🔄 Recovery Scenarios:</h4>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                    <thead style="background: #E3F2FD;">
+                        <tr>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd; text-align: left;">Failure Point</th>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd; text-align: left;">Last Checkpoint</th>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd; text-align: left;">Resume Behavior</th>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd; text-align: left;">Data Loss</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Crash during Extraction</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">CP2 (Manager Decision)</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Re-run Extraction node from beginning</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">✅ None</td>
+                        </tr>
+                        <tr style="background: #F8F9FA;">
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Azure OpenAI rate limit</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Last completed node</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Wait + retry failed node only</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">✅ None</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Corrupted PDF (1 of 3)</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">CP1 (Upload)</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Manager marks corrupted file, processes other 2</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">⚠️ Partial (1 file)</td>
+                        </tr>
+                        <tr style="background: #F8F9FA;">
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Database connection lost</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Last committed checkpoint</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Reconnect + resume from checkpoint</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">✅ None</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">User closes browser mid-workflow</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Last checkpoint (auto-saved)</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Resume when user returns (same thread_id)</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">✅ None</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div style="background: #E7F3FF; border-left: 4px solid #1971C2; padding: 1.5rem; margin: 1.5rem 0; border-radius: 4px;">
+                <h4 style="color: #1976D2;">💻 Implementation Code:</h4>
+                <pre style="background: #F8F9FA; padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.85rem;"><code>from langgraph.checkpoint.postgres import PostgresSaver
+from langgraph.graph import StateGraph
+
+# Configure PostgreSQL checkpointer (Azure SQL compatible)
+checkpointer = PostgresSaver.from_conn_string(
+    "postgresql://user:pass@your-azure-sql.database.windows.net/payapp_db"
+)
+
+# Build graph
+graph = StateGraph(PayAppState)
+graph.add_node("manager", manager_agent_node)
+graph.add_node("extraction", extraction_agent_node)
+graph.add_node("quality", quality_agent_node)
+graph.add_node("reconciliation", reconciliation_agent_node)
+
+# Compile with checkpointer - auto-saves after EVERY node
+app = graph.compile(checkpointer=checkpointer)
+
+# Execute workflow with thread_id (unique per pay app)
+config = {"configurable": {"thread_id": "app_july_2026"}}
+
+try:
+    result = app.invoke(initial_state, config)
+except Exception as crash:
+    logger.error(f"Workflow crashed: {crash}")
+    # No problem! Checkpoint already saved.
+    
+# Resume from crash (same thread_id)
+result = app.invoke(initial_state, config)  # Automatically resumes from last checkpoint!</code></pre>
+                
+                <p style="margin-top: 1rem; font-size: 0.95rem;"><strong>Key Benefits:</strong></p>
+                <ul style="font-size: 0.95rem;">
+                    <li>✅ <strong>Zero data loss:</strong> Every successful node execution is persisted</li>
+                    <li>✅ <strong>Automatic retry:</strong> Failed nodes re-execute without re-running entire workflow</li>
+                    <li>✅ <strong>Audit trail:</strong> Complete history of all state transitions in PostgreSQL</li>
+                    <li>✅ <strong>Time travel:</strong> Can replay workflow from any historical checkpoint</li>
+                    <li>✅ <strong>No custom code:</strong> LangGraph handles all checkpointing logic</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Natural Language Logging -->
+        <div class="diagram-section">
+            <h2>16. Natural Language Logging Architecture</h2>
+            <div class="description">
+                <strong>Copilot-Style Agent Narration:</strong> Every agent action is translated into human-readable narratives 
+                and displayed in a real-time chat window, similar to GitHub Copilot's agentic mode.
+            </div>
+            
+            <div class="mermaid">
+sequenceDiagram
+    participant User
+    participant ChatUI as Chat Window (Right Panel)
+    participant Manager as 🎯 Manager Agent
+    participant Narrator as Agent Narrator
+    participant Extraction as 🤖 Extraction Agent
+    participant Quality as 🔍 Quality Agent
+    
+    User->>ChatUI: Uploads 3 PDFs
+    Manager->>Narrator: log_manager_decision("Standard G702/G703 workflow")
+    Narrator->>ChatUI: 🎯 I've analyzed your documents...<br/>Decision: Standard extraction<br/>Next: Invoking Extraction Agent
+    
+    Manager->>Extraction: invoke(extract G702 + G703)
+    Extraction->>Narrator: log_extraction_attempt(page=1, confidence=92%)
+    Narrator->>ChatUI: 🤖 Processing G702 cover page...<br/>✅ Extracted 18 fields (92% confidence)
+    
+    Extraction->>Narrator: log_extraction_attempt(pages=2-5, confidence=78%)
+    Narrator->>ChatUI: 🤖 Low confidence on G703 pages (78%)<br/>⚙️ Requesting OCR Agent assistance...
+    
+    Extraction->>Manager: Report: Extraction complete with OCR assist
+    Manager->>Quality: invoke(validate extraction)
+    
+    Quality->>Narrator: log_validation_result(variance=$100, status="FLAG")
+    Narrator->>ChatUI: 🔍 Validation complete<br/>⚠️ Found $100 variance (0.08%)<br/>Status: Within tolerance
+    
+    Quality->>Manager: Report: 1 FLAG item for review
+    Manager->>Narrator: ask_user_question("Approve $100 variance?")
+    Narrator->>ChatUI: ❓ I need your input:<br/>Approve $100 variance or review details?
+    ChatUI->>User: [Display question with buttons]
+    User->>ChatUI: "Auto-approve"
+    ChatUI->>Manager: user_response: "approve"
+    
+    Manager->>Narrator: log_completion("Workflow complete")
+    Narrator->>ChatUI: ✅ Payment application processed!<br/>Status: Approved with 1 exception<br/>Total: $125,450
+            </div>
+            
+            <div style="background: #FFF3CD; border-left: 4px solid #FD7E14; padding: 1.5rem; margin: 1.5rem 0; border-radius: 4px;">
+                <h4 style="color: #D9480F;">📱 Chat UI Example Output:</h4>
+                <div style="background: white; padding: 1.5rem; border-radius: 4px; margin-top: 1rem; font-family: 'Segoe UI', sans-serif; font-size: 0.95rem; line-height: 1.6;">
+                    <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #eee;">
+                        <strong style="color: #FF6B6B;">🎯 Manager Agent</strong> <span style="color: #999; font-size: 0.85rem;">10:23 AM</span><br>
+                        I've analyzed your uploaded documents and identified this as a standard AIA G702/G703 payment application package.<br><br>
+                        <strong>Decision:</strong> Standard extraction workflow<br>
+                        <strong>Documents detected:</strong> G702 Cover Page (1 pg), G703 SOV (4 pgs)<br>
+                        <strong>Next step:</strong> Invoking Extraction Agent...
+                    </div>
+                    
+                    <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #eee;">
+                        <strong style="color: #4ECDC4;">🤖 Extraction Agent</strong> <span style="color: #999; font-size: 0.85rem;">10:23 AM</span><br>
+                        Processing G702 cover page (page 1)...<br>
+                        ✅ Successfully extracted 18 fields with 92% confidence<br><br>
+                        Processing G703 continuation sheet (pages 2-5)...<br>
+                        ⚠️ Low confidence on pages 3-4 (78% - handwritten entries detected)<br>
+                        ⚙️ Requesting OCR Agent for enhanced recognition...
+                    </div>
+                    
+                    <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #eee;">
+                        <strong style="color: #95E1D3;">🔍 OCR Agent</strong> <span style="color: #999; font-size: 0.85rem;">10:24 AM</span><br>
+                        Enhanced OCR processing on pages 3-4...<br>
+                        ✅ Confidence improved: 78% → 91%<br>
+                        Returning results to Extraction Agent.
+                    </div>
+                    
+                    <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #eee;">
+                        <strong style="color: #4ECDC4;">🔍 Quality Review Agent</strong> <span style="color: #999; font-size: 0.85rem;">10:24 AM</span><br>
+                        Validating extracted data...<br>
+                        ✅ Math equations: PASS (all calculations correct)<br>
+                        ⚠️ Cross-document reconciliation: FLAG<br>
+                        &nbsp;&nbsp;→ G702 total: $125,450<br>
+                        &nbsp;&nbsp;→ G703 sum: $125,350<br>
+                        &nbsp;&nbsp;→ Variance: $100 (0.08%)<br>
+                        Status: Within tolerance threshold (FLAG for review)
+                    </div>
+                    
+                    <div style="margin-bottom: 1rem; padding: 1rem; background: #FFF9DB; border-radius: 4px; border-left: 3px solid #FFD93D;">
+                        <strong style="color: #FF6B6B;">🎯 Manager Agent</strong> <span style="color: #999; font-size: 0.85rem;">10:24 AM</span><br>
+                        ❓ <strong>I need your input:</strong><br><br>
+                        Found a $100 variance (0.08%) between G702 and G703 totals. This is within tolerance but requires your decision.<br><br>
+                        <strong>Options:</strong><br>
+                        <button style="background: #51CF66; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; margin-right: 0.5rem;">✅ Auto-Approve</button>
+                        <button style="background: #4ECDC4; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">📋 Review Details</button>
+                    </div>
+                    
+                    <div style="padding: 0.5rem; background: #E3F2FD; border-radius: 4px; font-size: 0.9rem; color: #666;">
+                        👤 <strong>You:</strong> Auto-approve <span style="color: #999; font-size: 0.85rem;">10:25 AM</span>
+                    </div>
+                    
+                    <div style="margin-top: 1rem; padding: 1rem; background: #E7FFED; border-radius: 4px; border-left: 3px solid #51CF66;">
+                        <strong style="color: #2B8A3E;">✅ Manager Agent</strong> <span style="color: #999; font-size: 0.85rem;">10:25 AM</span><br>
+                        <strong>Payment application processed successfully!</strong><br><br>
+                        <strong>Status:</strong> Approved with 1 exception<br>
+                        <strong>Total Amount Due:</strong> $125,450.00<br>
+                        <strong>Processing Time:</strong> 2 minutes 14 seconds<br>
+                        <strong>Quality Score:</strong> 96%<br><br>
+                        📊 <a href="#" style="color: #1976D2;">View Full Report</a> | 📥 <a href="#" style="color: #1976D2;">Download PDF</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="background: #E7F3FF; border-left: 4px solid #1971C2; padding: 1.5rem; margin: 1.5rem 0; border-radius: 4px;">
+                <h4 style="color: #1976D2;">💻 Implementation Code:</h4>
+                <pre style="background: #F8F9FA; padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.85rem;"><code>class AgentNarrator:
+    """Translates agent actions into natural language for chat UI"""
+    
+    def __init__(self, websocket_connection):
+        self.ws = websocket_connection
+    
+    def log_manager_decision(self, decision: str, reasoning: str, next_step: str):
+        """Manager announces routing decision"""
+        message = {
+            "agent": "Manager",
+            "emoji": "🎯",
+            "color": "#FF6B6B",
+            "timestamp": datetime.now().isoformat(),
+            "content": f"""
+I've analyzed your uploaded documents and identified this workflow:
+
+**Decision:** {decision}
+
+**Reasoning:** {reasoning}
+
+**Next step:** {next_step}
+            """.strip()
+        }
+        self.ws.send_json(message)
+    
+    def log_extraction_attempt(self, page: int, confidence: float, status: str):
+        """Extraction Agent reports progress"""
+        if confidence >= 85:
+            emoji, status_text = "✅", f"Successfully extracted with {confidence}% confidence"
+        elif confidence >= 70:
+            emoji, status_text = "⚠️", f"Low confidence ({confidence}%) - requesting OCR assist"
+        else:
+            emoji, status_text = "❌", f"Failed extraction ({confidence}%) - escalating to Manager"
+        
+        message = {
+            "agent": "Extraction",
+            "emoji": "🤖",
+            "color": "#4ECDC4",
+            "timestamp": datetime.now().isoformat(),
+            "content": f"{emoji} Processing page {page}...\n{status_text}"
+        }
+        self.ws.send_json(message)
+    
+    async def ask_user_question(self, question: str, options: list[str], context: str = None):
+        """Manager asks user for input - pauses workflow"""
+        message = {
+            "agent": "Manager",
+            "emoji": "❓",
+            "color": "#FF6B6B",
+            "timestamp": datetime.now().isoformat(),
+            "type": "question",
+            "content": f"**I need your input:**\n\n{question}",
+            "context": context,
+            "options": options,
+            "awaiting_response": True
+        }
+        self.ws.send_json(message)
+        
+        # Wait for user response (workflow paused)
+        response = await self.ws.receive_json()
+        return response["user_answer"]</code></pre>
+            </div>
+        </div>
+        
+        <!-- Guardrail Ownership -->
+        <div class="diagram-section">
+            <h2>17. Guardrail Enforcement - Clear Ownership</h2>
+            <div class="description">
+                <strong>3-Tier Guardrail System with Defined Responsibilities:</strong> Each tier has a designated enforcer 
+                to prevent confusion and ensure consistent application of business rules.
+            </div>
+            
+            <div class="mermaid">
+graph TB
+    subgraph "Tier 1: BLOCK - Manager Enforces"
+        B1[Missing Critical Fields<br/>e.g., No signature on G702]
+        B2[Math Error > $10,000<br/>or > 5% variance]
+        B3[Invalid Date Range<br/>e.g., App date before previous app]
+        B4[Destructive Operation<br/>e.g., Delete approved app]
+        
+        B1 --> MANAGER_BLOCK[🛑 Manager: Stop Workflow<br/>Status = BLOCKED<br/>Notify User]
+        B2 --> MANAGER_BLOCK
+        B3 --> MANAGER_BLOCK
+        B4 --> MANAGER_BLOCK
+    end
+    
+    subgraph "Tier 2: FLAG - Quality Agent Reports, Manager Reviews"
+        F1[Unusual Pattern<br/>e.g., 50% complete → 100% in 1 month]
+        F2[Confidence 70-85%<br/>e.g., Fuzzy contractor match 82%]
+        F3[Soft Rule Violation<br/>e.g., Stored materials no photos]
+        F4[Minor Math Variance<br/>$100-10,000 or 1-5%]
+        
+        F1 --> QA_FLAG[⚠️ Quality: Create Flag<br/>Continue Workflow]
+        F2 --> QA_FLAG
+        F3 --> QA_FLAG
+        F4 --> QA_FLAG
+        
+        QA_FLAG --> MANAGER_REVIEW[📋 Manager: Review Flags<br/>Ask User for Approval]
+    end
+    
+    subgraph "Tier 3: AUTO-FIX - Agents Fix Themselves"
+        A1[Format Issues<br/>e.g., String '$125,450' → Float 125450]
+        A2[Minor Math Errors<br/>< $10 rounding]
+        A3[Date Standardization<br/>e.g., '07/06/2026' → ISO format]
+        A4[Whitespace Cleanup<br/>e.g., 'ABC  Plumbing' → 'ABC Plumbing']
+        
+        A1 --> AUTO[🔧 Agent: Auto-Fix<br/>Log Change<br/>Continue]
+        A2 --> AUTO
+        A3 --> AUTO
+        A4 --> AUTO
+    end
+    
+    style MANAGER_BLOCK fill:#FA5252,stroke:#C92A2A,stroke-width:3px,color:#fff
+    style MANAGER_REVIEW fill:#FFD93D,stroke:#F59F00,stroke-width:2px
+    style QA_FLAG fill:#FFA94D,stroke:#F76707,stroke-width:2px
+    style AUTO fill:#51CF66,stroke:#2B8A3E,stroke-width:2px,color:#fff
+            </div>
+            
+            <div style="background: #FFF3CD; border-left: 4px solid #FD7E14; padding: 1.5rem; margin: 1.5rem 0; border-radius: 4px;">
+                <h4 style="color: #D9480F;">📋 Ownership Matrix:</h4>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                    <thead style="background: #FFE8CC;">
+                        <tr>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd;">Tier</th>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd;">Enforcer</th>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd;">Action</th>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd;">Workflow Impact</th>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd;">User Interaction</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Tier 1: BLOCK</strong></td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">🎯 Manager Agent</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Stop workflow immediately</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">❌ Stopped</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">✅ Required (must fix to continue)</td>
+                        </tr>
+                        <tr style="background: #F8F9FA;">
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Tier 2: FLAG</strong></td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">🔍 Quality Agent → 🎯 Manager</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Log issue, continue workflow</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">✅ Continues</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">⚠️ Optional (review at end)</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Tier 3: AUTO-FIX</strong></td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Individual Agents</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Auto-correct, log change</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">✅ Continues</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">❌ None (automatic)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div style="background: #E7F3FF; border-left: 4px solid #1971C2; padding: 1.5rem; margin: 1.5rem 0; border-radius: 4px;">
+                <h4 style="color: #1976D2;">💻 Implementation Code:</h4>
+                <pre style="background: #F8F9FA; padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.85rem;"><code>def manager_node(state: PayAppState) -> PayAppState:
+    """Manager enforces Tier 1 BLOCK guardrails"""
+    
+    # Check critical errors from Quality Agent
+    for error in state.critical_errors:
+        if error.type == "missing_signature":
+            narrator.log_block(
+                "🛑 CRITICAL: G702 missing authorized signature. "
+                "Cannot proceed per AIA standards."
+            )
+            state.status = "BLOCKED"
+            state.workflow_stopped = True
+            state.user_action_required = "Fix signature and re-upload"
+            return state  # Stop workflow immediately
+        
+        elif error.type == "math_error" and error.amount > 10000:
+            narrator.log_block(
+                f"🛑 CRITICAL: Math error ${error.amount:,.2f} exceeds $10k threshold. "
+                f"Manual review required."
+            )
+            state.status = "BLOCKED"
+            return state
+    
+    # Review Tier 2 FLAGS after workflow completes
+    if state.quality_flags and state.workflow_phase == "complete":
+        response = narrator.ask_user(
+            f"Found {len(state.quality_flags)} items flagged for review. "
+            f"Approve with exceptions or reject?",
+            options=["Approve", "Review Details", "Reject"]
+        )
+        state.user_final_decision = response
+    
+    return state
+
+
+def quality_agent_node(state: PayAppState) -> PayAppState:
+    """Quality Agent detects Tier 2 FLAG items"""
+    
+    # Calculate variance
+    variance = abs(state.g702_total - state.g703_sum)
+    variance_pct = (variance / state.g702_total) * 100
+    
+    # Tier 2 FLAG: Log but continue
+    if 100 < variance <= 10000 or 1 < variance_pct <= 5:
+        state.quality_flags.append({
+            "type": "math_variance",
+            "severity": "FLAG",
+            "amount": variance,
+            "message": f"G702 vs G703 variance: ${variance:,.2f} ({variance_pct:.2f}%)"
+        })
+        narrator.log_flag(f"⚠️ Variance ${variance:,.2f} flagged for review")
+    
+    return state  # Continue workflow
+
+
+def extraction_agent_node(state: PayAppState) -> PayAppState:
+    """Extraction Agent applies Tier 3 AUTO-FIX"""
+    
+    # Tier 3 AUTO-FIX: String to float conversion
+    if isinstance(state.contract_sum, str):
+        original = state.contract_sum
+        state.contract_sum = float(original.replace("$", "").replace(",", ""))
+        narrator.log_auto_fix(
+            f"🔧 Auto-corrected contract sum: '{original}' → {state.contract_sum}"
+        )
+    
+    return state  # Continue workflow</code></pre>
+            </div>
+        </div>
+        
+        <!-- State Checkpointing Strategy -->
+        <div class="diagram-section">
+            <h2>18. State Checkpointing Strategy - 6 Phases</h2>
+            <div class="description">
+                <strong>Granular Checkpointing:</strong> Workflow divided into 6 distinct phases, each with automatic state 
+                persistence. Enables precise recovery and provides clear progress indicators to users.
+            </div>
+            
+            <div class="mermaid">
+stateDiagram-v2
+    [*] --> Phase1_Upload
+    
+    Phase1_Upload: 📤 Phase 1: Document Upload
+    Phase1_Upload: PDFs uploaded to Azure Blob Storage
+    Phase1_Upload: Metadata saved to database
+    Phase1_Upload: ✅ Checkpoint 1: Upload Complete
+    
+    Phase1_Upload --> Phase2_Extraction
+    
+    Phase2_Extraction: 🤖 Phase 2: Data Extraction
+    Phase2_Extraction: G702 + G703 fields extracted
+    Phase2_Extraction: OCR applied if needed
+    Phase2_Extraction: ✅ Checkpoint 2: Extraction Complete
+    
+    Phase2_Extraction --> Phase3_Quality
+    
+    Phase3_Quality: 🔍 Phase 3: Quality Review
+    Phase3_Quality: Math validation executed
+    Phase3_Quality: Business rules checked
+    Phase3_Quality: ✅ Checkpoint 3: Quality Complete
+    
+    Phase3_Quality --> Phase4_Reconciliation
+    
+    Phase4_Reconciliation: 🔧 Phase 4: Reconciliation
+    Phase4_Reconciliation: Entity matching performed
+    Phase4_Reconciliation: Duplicates resolved
+    Phase4_Reconciliation: ✅ Checkpoint 4: Reconciliation Complete
+    
+    Phase4_Reconciliation --> Phase5_HumanReview
+    
+    Phase5_HumanReview: 👤 Phase 5: Human Review (if needed)
+    Phase5_HumanReview: User answers questions
+    Phase5_HumanReview: Approves exceptions
+    Phase5_HumanReview: ✅ Checkpoint 5: User Approved
+    
+    Phase5_HumanReview --> Phase6_Finalization
+    
+    Phase6_Finalization: 📊 Phase 6: Finalization
+    Phase6_Finalization: Data committed to production DB
+    Phase6_Finalization: Reports generated
+    Phase6_Finalization: ✅ Checkpoint 6: Complete
+    
+    Phase6_Finalization --> [*]
+    
+    Phase2_Extraction --> Phase2_Extraction: 🔄 Retry if confidence < 85%
+    Phase3_Quality --> Phase1_Upload: ❌ BLOCK: Critical error - restart
+    Phase5_HumanReview --> Phase5_HumanReview: ⏸️ Pause indefinitely until user responds
+            </div>
+            
+            <div style="background: #E7FFED; border-left: 4px solid #2B8A3E; padding: 1.5rem; margin: 1.5rem 0; border-radius: 4px;">
+                <h4 style="color: #2B8A3E;">✅ Checkpoint Benefits:</h4>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                    <thead style="background: #D3F9D8;">
+                        <tr>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd;">Checkpoint</th>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd;">State Saved</th>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd;">Recovery Behavior</th>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd;">User Visibility</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>CP1: Upload</strong></td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">PDF blobs, file metadata, package_id</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Can re-process same PDFs without re-upload</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">📤 "Upload complete"</td>
+                        </tr>
+                        <tr style="background: #F8F9FA;">
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>CP2: Extraction</strong></td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">All extracted fields, confidence scores</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Skip re-extraction, resume at Quality</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">🤖 "Extraction complete (92% confidence)"</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>CP3: Quality</strong></td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Validation results, flags, exceptions</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Skip re-validation, resume at Reconciliation</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">🔍 "Quality check complete (1 flag)"</td>
+                        </tr>
+                        <tr style="background: #F8F9FA;">
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>CP4: Reconciliation</strong></td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Matched entities, resolved conflicts</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Skip re-reconciliation, go to Review</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">🔧 "Reconciliation complete"</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>CP5: User Approved</strong></td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">User responses, approval decision</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Can finalize without re-asking user</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">👤 "Approved by you"</td>
+                        </tr>
+                        <tr style="background: #F8F9FA;">
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>CP6: Complete</strong></td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Final state, production data committed</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Workflow complete, can archive</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">✅ "Processing complete!"</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Custom Agent Governance -->
+        <div class="diagram-section">
+            <h2>19. Custom Agent Governance & User Approval</h2>
+            <div class="description">
+                <strong>Controlled Agent Creation:</strong> Manager can dynamically create custom agents for new document patterns, 
+                but ONLY with explicit user approval. Prevents agent proliferation and gives user full control.
+            </div>
+            
+            <div class="mermaid">
+sequenceDiagram
+    participant Manager as 🎯 Manager Agent
+    participant Analyzer as Document Analyzer
+    participant User as 👤 User (Chat UI)
+    participant Registry as 📚 Agent Registry
+    participant Custom as ⚡ New Custom Agent
+    
+    Manager->>Analyzer: Analyze unknown document format
+    Analyzer->>Manager: Pattern: "QuickBooks Invoice Export"<br/>Suggested name: "ABC Plumbing QB Parser"
+    
+    Note over Manager: Before creating agent,<br/>MUST ask user approval
+    
+    Manager->>User: ❓ I've found a new document format<br/>Do you approve creating custom agent?<br/>[✅ Approve] [❌ Reject] [📝 This Month Only]
+    
+    alt User Approves Permanent Agent
+        User->>Manager: ✅ Approve & Create (permanent)
+        Manager->>Custom: create_custom_agent(lifecycle="permanent")
+        Custom->>Registry: save_to_registry(expiry=None)
+        Registry-->>Manager: Agent saved, can be reused
+        Manager->>User: ✅ Created "ABC Plumbing QB Parser"<br/>Will be available for future apps
+    
+    else User Approves Temporary Agent
+        User->>Manager: 📝 This Month Only
+        Manager->>Custom: create_custom_agent(lifecycle="temporary", expiry="2026-07-31")
+        Custom->>Registry: save_to_registry(expiry="2026-07-31")
+        Manager->>User: ✅ Created temporary agent<br/>Expires: July 31, 2026
+    
+    else User Rejects
+        User->>Manager: ❌ Reject
+        Manager->>User: ❌ Custom agent not created<br/>Please enter data manually
+        Note over Manager: Falls back to<br/>manual entry workflow
+    end
+    
+    Note over Registry: At end of month:<br/>Cleanup temporary agents
+    Registry->>Registry: deprecate_agents(expiry < current_date)
+    Registry->>User: 📦 Deprecated 2 temporary agents
+            </div>
+            
+            <div style="background: #FFF3CD; border-left: 4px solid #FD7E14; padding: 1.5rem; margin: 1.5rem 0; border-radius: 4px;">
+                <h4 style="color: #D9480F;">🤖 User Approval Dialog Example:</h4>
+                <div style="background: white; padding: 1.5rem; border-radius: 4px; margin-top: 1rem; border: 2px solid #FFD93D;">
+                    <strong style="color: #FF6B6B;">🎯 Manager Agent</strong> <span style="color: #999; font-size: 0.85rem;">2:34 PM</span><br><br>
+                    
+                    <div style="background: #FFF9DB; padding: 1rem; border-radius: 4px; margin-top: 0.5rem;">
+                        ❓ <strong>I need your approval to create a custom agent:</strong><br><br>
+                        
+                        <strong>What I Found:</strong><br>
+                        I've encountered a new document format from "ABC Plumbing" that doesn't match standard AIA G703 layout. 
+                        It appears to be a QuickBooks invoice export with a custom line item table structure.<br><br>
+                        
+                        <strong>My Proposal:</strong><br>
+                        Create a custom agent called <strong>"ABC Plumbing QB Parser"</strong> to handle this format.<br><br>
+                        
+                        <strong>Benefits:</strong><br>
+                        • ✅ Faster processing next time ABC Plumbing submits<br>
+                        • ✅ Learns this contractor's specific format<br>
+                        • ✅ Reduces manual data entry<br><br>
+                        
+                        <strong>Cost:</strong><br>
+                        • Creates 1 new agent in registry<br>
+                        • Agent persists until you deprecate it<br>
+                        • Minimal storage (~50KB)<br><br>
+                        
+                        <strong>Do you approve?</strong><br><br>
+                        
+                        <button style="background: #51CF66; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; cursor: pointer; margin-right: 0.5rem; font-size: 0.95rem;">
+                            ✅ Approve & Create (Permanent)
+                        </button>
+                        <button style="background: #4ECDC4; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; cursor: pointer; margin-right: 0.5rem; font-size: 0.95rem;">
+                            📝 Approve for This Month Only
+                        </button>
+                        <button style="background: #FA5252; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; cursor: pointer; font-size: 0.95rem;">
+                            ❌ Reject (Manual Entry)
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="background: #E7F3FF; border-left: 4px solid #1971C2; padding: 1.5rem; margin: 1.5rem 0; border-radius: 4px;">
+                <h4 style="color: #1976D2;">📋 Agent Lifecycle Management:</h4>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                    <thead style="background: #E3F2FD;">
+                        <tr>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd;">Lifecycle Type</th>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd;">Expiry</th>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd;">Reusable</th>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd;">Deprecation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Permanent</strong></td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Never (until user manually deprecates)</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">✅ Yes (across all future apps)</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Manual only (user decision)</td>
+                        </tr>
+                        <tr style="background: #F8F9FA;">
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Temporary (This Month)</strong></td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">End of month (e.g., 2026-07-31)</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">✅ Yes (within same month)</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Auto-deprecated after expiry date</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>One-Time (Rejected)</strong></td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Immediate (not created)</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">❌ No (manual entry instead)</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">N/A (never created)</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <p style="margin-top: 1.5rem;"><strong>End-of-Month Cleanup Process:</strong></p>
+                <ol style="line-height: 1.8;">
+                    <li>User finalizes payment application for the month</li>
+                    <li>Manager triggers agent registry cleanup</li>
+                    <li>All temporary agents with <code>expiry &lt; current_date</code> are deprecated</li>
+                    <li>Permanent agents: Manager asks user if they should be kept or archived</li>
+                    <li>Deprecated agents moved to <code>archived_agents</code> table (audit trail)</li>
+                </ol>
+            </div>
+        </div>
+        
+        <!-- Human-in-Loop Implementation -->
+        <div class="diagram-section">
+            <h2>20. Human-in-the-Loop - Indefinite Pause Pattern</h2>
+            <div class="description">
+                <strong>LangGraph Interrupt Pattern:</strong> Workflow pauses indefinitely when Manager needs user input. 
+                No timeouts (user can respond hours/days later). State persists in PostgreSQL checkpoint.
+            </div>
+            
+            <div class="mermaid">
+stateDiagram-v2
+    [*] --> Running: User uploads PDFs
+    
+    Running: 🏃 Workflow Running
+    Running: Manager → Extraction → Quality
+    
+    Running --> NeedInput: Manager detects ambiguity
+    
+    NeedInput: ⏸️ PAUSED - Awaiting User Input
+    NeedInput: Checkpoint saved to PostgreSQL
+    NeedInput: User can close browser, come back later
+    
+    NeedInput --> Running: User answers question
+    
+    Running --> Complete: All phases done
+    
+    Complete: ✅ Workflow Complete
+    Complete: Final checkpoint saved
+    
+    Complete --> [*]
+    
+    note right of NeedInput
+        NO TIMEOUT!
+        Workflow pauses indefinitely
+        User can respond in:
+        - 5 minutes
+        - 2 hours
+        - 3 days
+        State always preserved
+    end note
+            </div>
+            
+            <div style="background: #E7FFED; border-left: 4px solid #2B8A3E; padding: 1.5rem; margin: 1.5rem 0; border-radius: 4px;">
+                <h4 style="color: #2B8A3E;">✅ Pause & Resume Flow:</h4>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                    <thead style="background: #D3F9D8;">
+                        <tr>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd;">Time</th>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd;">Event</th>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd;">State</th>
+                            <th style="padding: 0.75rem; border: 1px solid #ddd;">User Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Monday 10:00 AM</strong></td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">User uploads PDFs</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Workflow starts (thread_id: "app_july_2026")</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">-</td>
+                        </tr>
+                        <tr style="background: #F8F9FA;">
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Monday 10:02 AM</strong></td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Manager needs input (ambiguous contractor match)</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">⏸️ PAUSED at human_review node</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Question displayed in chat</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Monday 10:03 AM</strong></td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">User closes browser (goes to meeting)</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Still paused, state saved in PostgreSQL</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">-</td>
+                        </tr>
+                        <tr style="background: #F8F9FA;">
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Tuesday 9:00 AM</strong></td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">User returns to app (24 hours later)</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Still paused, question still visible</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">User reads question</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Tuesday 9:01 AM</strong></td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">User answers: "Yes, same contractor"</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">🏃 Workflow resumes from human_review</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Answer submitted</td>
+                        </tr>
+                        <tr style="background: #F8F9FA;">
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;"><strong>Tuesday 9:03 AM</strong></td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Reconciliation → Finalization complete</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">✅ COMPLETE</td>
+                            <td style="padding: 0.75rem; border: 1px solid #ddd;">Report generated</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <p style="margin-top: 1.5rem; padding: 1rem; background: white; border-radius: 4px; border-left: 3px solid #51CF66;">
+                    <strong>💡 Key Insight:</strong> With only <strong>1 app/month</strong>, there's no need for timeout logic. 
+                    User can take days to respond without impacting other workflows. Indefinite pause is the simplest, most 
+                    user-friendly approach for low-volume processing.
+                </p>
+            </div>
+            
+            <div style="background: #E7F3FF; border-left: 4px solid #1971C2; padding: 1.5rem; margin: 1.5rem 0; border-radius: 4px;">
+                <h4 style="color: #1976D2;">💻 Implementation Code:</h4>
+                <pre style="background: #F8F9FA; padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.85rem;"><code>from langgraph.graph import StateGraph
+from langgraph.checkpoint.postgres import PostgresSaver
+
+# Configure graph with interrupt
+graph = StateGraph(PayAppState)
+graph.add_node("manager", manager_node)
+graph.add_node("extraction", extraction_node)
+graph.add_node("quality", quality_node)
+graph.add_node("human_review", human_review_node)  # Interrupt point
+graph.add_node("reconciliation", reconciliation_node)
+
+# Add conditional edge: pause if human input needed
+graph.add_conditional_edges(
+    "manager",
+    should_ask_user,  # Returns "human_review" or "continue"
+    {
+        "human_review": "human_review",  # Goes to interrupt
+        "continue": "reconciliation"
+    }
+)
+
+# Compile with interrupt BEFORE human_review
+app = graph.compile(
+    checkpointer=PostgresSaver.from_conn_string(postgres_url),
+    interrupt_before=["human_review"]  # ⏸️ Pauses here
+)
+
+# First invocation - will pause at human_review
+config = {"configurable": {"thread_id": "app_july_2026"}}
+result = app.invoke(initial_state, config)
+
+# Returns: {"status": "PENDING_HUMAN_INPUT", "question": "Are these the same contractor?"}
+# Workflow is now paused, state saved to PostgreSQL
+
+# ... User can close browser, come back hours/days later ...
+
+# User answers question
+state_with_answer = result["state"]
+state_with_answer["user_responses"]["contractor_match"] = "yes_same"
+
+# Second invocation - resumes from human_review checkpoint
+final_result = app.invoke(state_with_answer, config)
+
+# Workflow continues: reconciliation → finalization → complete!
+# Returns: {"status": "COMPLETE", "total_amount": 125450.00}</code></pre>
+                
+                <p style="margin-top: 1rem;"><strong>Alternative: Streaming Updates</strong></p>
+                <pre style="background: #F8F9FA; padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.85rem;"><code># For real-time chat updates during workflow
+async for chunk in app.astream(initial_state, config):
+    if "human_review" in chunk:
+        # Workflow paused, send question to UI
+        await websocket.send_json({
+            "type": "question",
+            "content": chunk["human_review"]["question"],
+            "paused": True
+        })
+        
+        # Wait for user response
+        user_answer = await websocket.receive_json()
+        
+        # Resume workflow with answer
+        state_with_answer = chunk["state"]
+        state_with_answer["user_responses"] = user_answer
+        
+        # Continue streaming
+        async for final_chunk in app.astream(state_with_answer, config):
+            await websocket.send_json(final_chunk)</code></pre>
+            </div>
+        </div>
+        
+        <div style="text-align: center; padding: 2rem; color: #666; border-top: 2px solid #ddd; margin-top: 2rem;">
+            <p><strong>LangGraph Multi-Agent Orchestration Architecture</strong></p>
+            <p>Payment Application Processing System - Version 2.0</p>
+            <p><em>Intelligent Manager Agent with Construction Industry Domain Expertise</em></p>
+            <p style="font-size: 0.9rem; margin-top: 0.5rem;">20 Comprehensive Diagrams | Generated: 2026-07-06 | Senior AI Solution Architect Design</p>
+            <p style="font-size: 0.85rem; margin-top: 1rem; color: #999;">✅ Architecture validated for production with industry best practices</p>
+        </div>
+    </div>
+    
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            themeVariables: {
+                primaryColor: '#4ECDC4',
+                primaryTextColor: '#fff',
+                primaryBorderColor: '#0A6A7A',
+                lineColor: '#999',
+                secondaryColor: '#FF6B6B',
+                tertiaryColor: '#95E1D3',
+                fontSize: '14px',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+            },
+            flowchart: {
+                curve: 'basis',
+                padding: 20
+            },
+            sequence: {
+                diagramMarginX: 20,
+                diagramMarginY: 20,
+                actorMargin: 100,
+                width: 200,
+                height: 65,
+                boxMargin: 10,
+                boxTextMargin: 5,
+                noteMargin: 10,
+                messageMargin: 40
+            }
+        });
+    </script>
+</body>
+</html>
