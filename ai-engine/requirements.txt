@@ -1,0 +1,37 @@
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.1
+python-dotenv>=1.0.1
+pydantic>=2.7.4
+pydantic-settings>=2.3.4
+
+# LangGraph & LangChain
+langgraph>=0.2.14
+langchain>=0.2.9
+langchain-openai>=0.1.17
+langchain-core>=0.2.21
+langgraph-checkpoint-postgres>=2.0.2
+
+# PostgreSQL driver for LangGraph checkpointer (langgraph needs psycopg v3)
+psycopg[binary]>=3.1.0
+psycopg2-binary>=2.9.9
+
+# Azure
+azure-ai-documentintelligence>=1.0.0
+azure-storage-blob>=12.21.0
+azure-identity>=1.17.1
+openai>=1.35.13
+
+# PDF
+pdfplumber>=0.11.1
+pdf2image>=1.17.0
+Pillow>=10.4.0
+
+# LangSmith tracing
+langsmith>=0.1.83
+
+# HTTP client (for calling api-gateway callbacks)
+httpx>=0.27.0
+
+# Testing
+pytest>=8.3.1
+pytest-asyncio>=0.23.7
