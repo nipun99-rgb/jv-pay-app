@@ -1,0 +1,114 @@
+version: '3.9'
+
+services:
+  # ─── Azure SQL Server (local dev) ──────────────────────────────────────────
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: jvpay-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "YourStrong@Passw0rd"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "YourStrong@Passw0rd" -C -Q "SELECT 1" || exit 1
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ─── PostgreSQL (LangGraph checkpointer) ───────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: jvpay-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: jvpay
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Azurite (Azure Blob Storage emulator) ─────────────────────────────────
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    container_name: jvpay-azurite
+    command: azurite-blob --blobHost 0.0.0.0 --blobPort 10000 --loose
+    ports:
+      - "10000:10000"
+    volumes:
+      - azurite_data:/data
+
+  # ─── TypeScript API Gateway ────────────────────────────────────────────────
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: jvpay-api-gateway
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      FRONTEND_URL: http://localhost:5173
+      DATABASE_URL: "sqlserver://sqlserver:1433;database=jvpay;user=sa;password=YourStrong@Passw0rd;trustServerCertificate=true"
+      AZURE_STORAGE_CONNECTION_STRING: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OGLjX+N5X8pnOzAimsNLMg==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
+      AZURE_STORAGE_CONTAINER_NAME: jvpay-docs
+      AI_ENGINE_URL: http://ai-engine:8000
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      azurite:
+        condition: service_started
+    volumes:
+      - ./api-gateway/src:/app/src:ro  # hot-reload in dev
+    restart: unless-stopped
+
+  # ─── Python AI Engine ──────────────────────────────────────────────────────
+  ai-engine:
+    build:
+      context: ./ai-engine
+      dockerfile: Dockerfile
+    container_name: jvpay-ai-engine
+    ports:
+      - "8000:8000"
+    environment:
+      API_GATEWAY_URL: http://api-gateway:3001
+      POSTGRES_DSN: "postgresql://postgres:postgres@postgres:5432/jvpay"
+      AZURE_STORAGE_CONNECTION_STRING: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OGLjX+N5X8pnOzAimsNLMg==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
+      AZURE_STORAGE_CONTAINER_NAME: jvpay-docs
+      LANGCHAIN_TRACING_V2: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      azurite:
+        condition: service_started
+    restart: unless-stopped
+
+  # ─── Frontend (dev server) ─────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: jvpay-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:3001
+    depends_on:
+      - api-gateway
+    restart: unless-stopped
+
+volumes:
+  sqlserver_data:
+  postgres_data:
+  azurite_data:
