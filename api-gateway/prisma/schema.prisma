@@ -1,0 +1,285 @@
+// Prisma schema for JV Pay Application v2
+// Progressive schema — core tables for Sprint 2, extended in later sprints.
+// Database: Azure SQL (aic-ind.database.windows.net/jvpay)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PACKAGE & DOCUMENTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model Client {
+  id           String   @id @default(uuid())
+  name         String   @db.NVarChar(255)
+  contactName  String?  @map("contact_name") @db.NVarChar(255)
+  contactEmail String?  @map("contact_email") @db.NVarChar(255)
+  createdAt    DateTime @default(now()) @map("created_at") @db.DateTime2
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.DateTime2
+
+  contracts Contract[]
+
+  @@map("clients")
+}
+
+model Contract {
+  id             String    @id @default(uuid())
+  clientId       String    @map("client_id")
+  name           String    @db.NVarChar(255)
+  projectAddress String?   @map("project_address") @db.NVarChar(Max)
+  contractValue  Decimal?  @map("contract_value") @db.Decimal(18, 2)
+  startDate      DateTime? @map("start_date") @db.DateTime2
+  endDate        DateTime? @map("end_date") @db.DateTime2
+  createdAt      DateTime  @default(now()) @map("created_at") @db.DateTime2
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.DateTime2
+
+  client   Client    @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  packages Package[]
+
+  @@index([clientId])
+  @@map("contracts")
+}
+
+model Package {
+  id           String    @id @default(uuid())
+  projectName         String    @map("project_name") @db.NVarChar(255)
+  applicationPeriod   String?   @map("application_period") @db.NVarChar(20)  // e.g. "2026-07"
+  status       String    @default("PENDING")            // PENDING | INGESTING | CLASSIFYING | EXTRACTING | AWAITING_PLAN | VERIFYING | RECONCILING | REVIEW | APPROVED | FAILED
+  createdBy    String    @map("created_by") @db.NVarChar(255)
+  contractId   String?   @map("contract_id")
+  totalCostUsd Decimal?  @map("total_cost_usd") @db.Decimal(18, 2)
+  totalTokens  Int?      @map("total_tokens")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.DateTime2
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.DateTime2
+
+  contract     Contract? @relation(fields: [contractId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  documents    Document[]
+  gcHeader     GcPayApplicationHeader?
+  gcSovLines   GcPayApplicationSovLine[]
+  subHeaders   SubPayApplicationHeader[]
+  exceptions   ReconException[]
+  changeLogs   DataChangeLog[]
+  activityLogs ActivityLog[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([contractId])
+  @@map("packages")
+}
+
+model Document {
+  id        String   @id @default(uuid())
+  packageId String   @map("package_id")
+  filename  String   @db.NVarChar(512)
+  fileType  String?  @map("file_type") @db.NVarChar(50)   // GC_PAY_APP | SUB_PAY_APP | SUPPORTING
+  blobName  String   @map("blob_name") @db.NVarChar(Max)
+  blobUrl   String   @map("blob_url") @db.NVarChar(Max)
+  createdBy String   @map("created_by") @db.NVarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime2
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([packageId])
+  @@map("documents")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GC PAY APPLICATION (File 1) — populated in Sprint 5
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model GcPayApplicationHeader {
+  id                   String   @id @default(uuid())
+  packageId            String   @unique @map("package_id")
+  toOwner              String?  @map("to_owner") @db.NVarChar(Max)
+  fromContractor       String?  @map("from_contractor") @db.NVarChar(Max)
+  projectName          String?  @map("project_name") @db.NVarChar(Max)
+  applicationNo        String?  @map("application_no") @db.NVarChar(50)
+  period               String?  @db.NVarChar(50)
+  periodFrom           String?  @map("period_from") @db.NVarChar(50)
+  periodTo             String?  @map("period_to") @db.NVarChar(50)
+  originalContractSum  Decimal? @map("original_contract_sum") @db.Decimal(18, 2)
+  netChangeOrders      Decimal? @map("net_change_orders") @db.Decimal(18, 2)
+  contractSumToDate    Decimal? @map("contract_sum_to_date") @db.Decimal(18, 2)
+  totalCompletedStored Decimal? @map("total_completed_stored") @db.Decimal(18, 2)
+  retainageCompleted   Decimal? @map("retainage_completed") @db.Decimal(18, 2)
+  retainageMaterials   Decimal? @map("retainage_materials") @db.Decimal(18, 2)
+  totalRetainage       Decimal? @map("total_retainage") @db.Decimal(18, 2)
+  totalEarnedLessRet   Decimal? @map("total_earned_less_ret") @db.Decimal(18, 2)
+  lessPrevCertificates Decimal? @map("less_prev_certificates") @db.Decimal(18, 2)
+  currentPaymentDue    Decimal? @map("current_payment_due") @db.Decimal(18, 2)
+  balanceToFinish      Decimal? @map("balance_to_finish") @db.Decimal(18, 2)
+  changeOrderSummary   String?  @map("change_order_summary") @db.NVarChar(Max)
+  architectSignature   String?  @map("architect_signature") @db.NVarChar(Max)
+  contractorSignature  String?  @map("contractor_signature") @db.NVarChar(Max)
+  extractionConfidence Decimal? @map("extraction_confidence") @db.Decimal(5, 4)
+  sourcePage           Int?     @map("source_page")
+  agentRunId           String?  @map("agent_run_id")
+  validationStatus     String?  @map("validation_status") @db.NVarChar(20)
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([packageId])
+  @@map("gc_pay_application_headers")
+}
+
+model GcPayApplicationSovLine {
+  id                    String   @id @default(uuid())
+  packageId             String   @map("package_id")
+  itemNo                String?  @map("item_no") @db.NVarChar(50)
+  timePeriod            String?  @map("time_period") @db.NVarChar(50)
+  phases                String?  @db.NVarChar(Max)
+  typeOfWork            String?  @map("type_of_work") @db.NVarChar(Max)
+  contractorName        String?  @map("contractor_name") @db.NVarChar(Max)
+  scheduledOriginal     Decimal? @map("scheduled_original") @db.Decimal(18, 2)
+  scheduledChangeOrders Decimal? @map("scheduled_change_orders") @db.Decimal(18, 2)
+  scheduledCurrent      Decimal? @map("scheduled_current") @db.Decimal(18, 2)
+  workCompletedPrev     Decimal? @map("work_completed_prev") @db.Decimal(18, 2)
+  workCompletedThis     Decimal? @map("work_completed_this") @db.Decimal(18, 2)
+  materialsStored       Decimal? @map("materials_stored") @db.Decimal(18, 2)
+  totalCompleted        Decimal? @map("total_completed") @db.Decimal(18, 2)
+  pct                   Decimal? @db.Decimal(5, 4)
+  balanceToFinish       Decimal? @map("balance_to_finish") @db.Decimal(18, 2)
+  retainage             Decimal? @db.Decimal(18, 2)
+  extractionConfidence  Decimal? @map("extraction_confidence") @db.Decimal(5, 4)
+  sourcePage            Int?     @map("source_page")
+  validationStatus      String?  @map("validation_status") @db.NVarChar(20)
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([packageId])
+  @@map("gc_pay_application_sov_lines")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SUB PAY APPLICATION (File 2) — populated in Sprint 7
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model SubPayApplicationHeader {
+  id                     String   @id @default(uuid())
+  packageId              String   @map("package_id")
+  seqId                  Int      @map("seq_id")
+  subcontractorName      String?  @map("subcontractor_name") @db.NVarChar(Max)
+  applicationNo          String?  @map("application_no") @db.NVarChar(50)
+  applicationDate        String?  @map("application_date") @db.NVarChar(50)
+  periodFrom             String?  @map("period_from") @db.NVarChar(50)
+  periodTo               String?  @map("period_to") @db.NVarChar(50)
+  invoiceTo              String?  @map("invoice_to") @db.NVarChar(Max)
+  projectName            String?  @map("project_name") @db.NVarChar(Max)
+  contractPoNumber       String?  @map("contract_po_number") @db.NVarChar(100)
+  originalContractSum    Decimal? @map("original_contract_sum") @db.Decimal(18, 2)
+  netChangeOrders        Decimal? @map("net_change_orders") @db.Decimal(18, 2)
+  contractSumToDate      Decimal? @map("contract_sum_to_date") @db.Decimal(18, 2)
+  totalCompletedStored   Decimal? @map("total_completed_stored") @db.Decimal(18, 2)
+  totalRetainage         Decimal? @map("total_retainage") @db.Decimal(18, 2)
+  retainagePercent       Decimal? @map("retainage_percent") @db.Decimal(5, 4)
+  totalEarnedLessRet     Decimal? @map("total_earned_less_ret") @db.Decimal(18, 2)
+  lessPreviousCerts      Decimal? @map("less_previous_certs") @db.Decimal(18, 2)
+  currentPaymentDue      Decimal? @map("current_payment_due") @db.Decimal(18, 2)
+  balanceToFinish        Decimal? @map("balance_to_finish") @db.Decimal(18, 2)
+  startPage              Int?     @map("start_page")
+  endPage                Int?     @map("end_page")
+  extractionConfidence   Decimal? @map("extraction_confidence") @db.Decimal(5, 4)
+  validationStatus       String?  @map("validation_status") @db.NVarChar(20)
+
+  package  Package                  @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sovLines SubPayApplicationSovLine[]
+
+  @@index([packageId])
+  @@map("sub_pay_application_headers")
+}
+
+model SubPayApplicationSovLine {
+  id                         String   @id @default(uuid())
+  subAppId                   String   @map("sub_app_id")
+  itemNo                     String?  @map("item_no") @db.NVarChar(50)
+  description                String?  @db.NVarChar(Max)
+  scheduledValue             Decimal? @map("scheduled_value") @db.Decimal(18, 2)
+  workCompletedPrev          Decimal? @map("work_completed_prev") @db.Decimal(18, 2)
+  workCompletedThis          Decimal? @map("work_completed_this") @db.Decimal(18, 2)
+  materialsStored            Decimal? @map("materials_stored") @db.Decimal(18, 2)
+  totalCompleted             Decimal? @map("total_completed") @db.Decimal(18, 2)
+  pctComplete                Decimal? @map("pct_complete") @db.Decimal(5, 4)
+  retainage                  Decimal? @db.Decimal(18, 2)
+  balanceToFinish            Decimal? @map("balance_to_finish") @db.Decimal(18, 2)
+  contractorSignaturePresent Boolean? @map("contractor_signature_present")
+  notaryDetailsPresent       Boolean? @map("notary_details_present")
+  extractionConfidence       Decimal? @map("extraction_confidence") @db.Decimal(5, 4)
+  sourcePage                 Int?     @map("source_page")
+  validationStatus           String?  @map("validation_status") @db.NVarChar(20)
+
+  subApp SubPayApplicationHeader @relation(fields: [subAppId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([subAppId])
+  @@map("sub_pay_application_sov_lines")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RECONCILIATION EXCEPTIONS — populated in Sprint 9
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model ReconException {
+  id        String   @id @default(uuid())
+  packageId String   @map("package_id")
+  type      String   @db.NVarChar(100)       // CROSS_FILE | MATH | RETAINAGE | PERIOD | SUPPORTING
+  severity  String   @db.NVarChar(20)        // HIGH | MEDIUM | LOW
+  subName   String?  @map("sub_name") @db.NVarChar(Max)
+  delta     Decimal? @db.Decimal(18, 2)
+  evidence  String?  @db.NVarChar(Max)
+  status    String   @default("OPEN")        // OPEN | RESOLVED | DISMISSED
+  resolution String? @db.NVarChar(Max)
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime2
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime2
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([packageId])
+  @@index([status])
+  @@map("recon_exceptions")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AUDIT — populated continuously
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model DataChangeLog {
+  id          String   @id @default(uuid())
+  packageId   String   @map("package_id")
+  tableName   String   @map("table_name") @db.NVarChar(100)
+  recordId    String   @map("record_id") @db.NVarChar(100)
+  fieldName   String   @map("field_name") @db.NVarChar(100)
+  oldValue    String?  @map("old_value") @db.NVarChar(Max)
+  newValue    String?  @map("new_value") @db.NVarChar(Max)
+  changedBy   String   @map("changed_by") @db.NVarChar(255)
+  changedAt   DateTime @default(now()) @map("changed_at") @db.DateTime2
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([packageId])
+  @@index([changedAt])
+  @@map("data_change_logs")
+}
+
+// ─── Activity Log (pipeline events visible in IngestPage activity feed) ───────
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  packageId String   @map("package_id")
+  message   String   @db.NVarChar(Max)
+  eventType String   @default("info") @map("event_type") @db.NVarChar(20)  // info | success | error
+  node      String?  @db.NVarChar(100)
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime2
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([packageId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+

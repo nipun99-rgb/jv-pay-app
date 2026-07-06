@@ -1,0 +1,290 @@
+// This is your Prisma schema file for JV Pay Application v2.
+// Uses Azure SQL (SQL Server) provider.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+// ─── 1. Package ───────────────────────────────────────────────────────────────
+model Package {
+  id             String    @id @default(uuid())
+  projectName    String    @db.NVarChar(255)
+  status         String    @default("PENDING") @db.NVarChar(50)
+  // Possible values: PENDING | INGESTING | CLASSIFYING | EXTRACTING |
+  //                  VERIFYING | RECONCILING | REVIEW | APPROVED | FAILED
+  createdBy      String    @db.NVarChar(255)
+  createdAt      DateTime  @default(now()) @db.DateTime2
+  updatedAt      DateTime  @updatedAt @db.DateTime2
+  totalCostUsd   Decimal?  @db.Decimal(10, 6)
+  totalTokens    Int?
+
+  // Relations
+  documents      Document[]
+  gcHeader       GcPayApplicationHeader?
+  gcSovLines     GcPayApplicationSovLine[]
+  subHeaders     SubPayApplicationHeader[]
+  subSovLines    SubPayApplicationSovLine[]
+  changeLogs     DataChangeLog[]
+  exceptions     ReconException[]
+
+  @@map("packages")
+}
+
+// ─── 2. Document ──────────────────────────────────────────────────────────────
+model Document {
+  id                      String   @id @default(uuid())
+  packageId               String
+  filename                String   @db.NVarChar(500)
+  blobUrl                 String   @db.NVarChar(Max)
+  pageCount               Int?
+  fileType                String?  @db.NVarChar(50)
+  // file_type: GC_G702 | GC_G703 | SUB_G702 | SUB_G703 | OTHER
+  classificationConfidence Decimal? @db.Decimal(5, 4)
+  uploadedAt              DateTime @default(now()) @db.DateTime2
+
+  // Relations
+  package Package @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("documents")
+}
+
+// ─── 3. GcPayApplicationHeader ────────────────────────────────────────────────
+model GcPayApplicationHeader {
+  id                   String   @id @default(uuid())
+  packageId            String   @unique
+
+  // 19 extracted fields
+  fromContractor       String?  @db.NVarChar(500)
+  projectName          String?  @db.NVarChar(500)
+  applicationNo        String?  @db.NVarChar(50)
+  periodFrom           DateTime? @db.DateTime2
+  periodTo             DateTime? @db.DateTime2
+  originalContractSum  Decimal?  @db.Decimal(18, 2)
+  netChangeOrders      Decimal?  @db.Decimal(18, 2)
+  contractSumToDate    Decimal?  @db.Decimal(18, 2)
+  totalCompletedStored Decimal?  @db.Decimal(18, 2)
+  retainageCompleted   Decimal?  @db.Decimal(18, 2)
+  retainageMaterials   Decimal?  @db.Decimal(18, 2)
+  totalRetainage       Decimal?  @db.Decimal(18, 2)
+  totalEarnedLessRet   Decimal?  @db.Decimal(18, 2)
+  lessPrevCertificates Decimal?  @db.Decimal(18, 2)
+  currentPaymentDue    Decimal?  @db.Decimal(18, 2)
+  balanceToFinish      Decimal?  @db.Decimal(18, 2)
+  changeOrderSummary   String?   @db.NVarChar(Max)
+  architectSignature   String?   @db.NVarChar(255)
+  contractorSignature  String?   @db.NVarChar(255)
+
+  // Provenance
+  sourcePage           Int?
+  confidence           Decimal?  @db.Decimal(5, 4)
+  bboxX                Decimal?  @db.Decimal(10, 4)
+  bboxY                Decimal?  @db.Decimal(10, 4)
+  bboxW                Decimal?  @db.Decimal(10, 4)
+  bboxH                Decimal?  @db.Decimal(10, 4)
+  validationStatus     String?   @db.NVarChar(50)
+  // validation_status: AUTO_APPROVED | SPOT_CHECK | ESCALATED | USER_APPROVED
+
+  extractedAt          DateTime  @default(now()) @db.DateTime2
+  updatedAt            DateTime  @updatedAt @db.DateTime2
+
+  // Relations
+  package Package @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("gc_pay_application_headers")
+}
+
+// ─── 4. GcPayApplicationSovLine ───────────────────────────────────────────────
+model GcPayApplicationSovLine {
+  id                   String   @id @default(uuid())
+  packageId            String
+
+  // 15 extracted fields
+  itemNo               String?  @db.NVarChar(50)
+  timePeriod           String?  @db.NVarChar(100)
+  phases               String?  @db.NVarChar(255)
+  typeOfWork           String?  @db.NVarChar(255)
+  contractorName       String?  @db.NVarChar(500)
+  scheduledOriginal    Decimal? @db.Decimal(18, 2)
+  scheduledChangeOrders Decimal? @db.Decimal(18, 2)
+  scheduledCurrent     Decimal? @db.Decimal(18, 2)
+  workCompletedPrev    Decimal? @db.Decimal(18, 2)
+  workCompletedThis    Decimal? @db.Decimal(18, 2)
+  materialsStored      Decimal? @db.Decimal(18, 2)
+  totalCompleted       Decimal? @db.Decimal(18, 2)
+  pct                  Decimal? @db.Decimal(6, 4)
+  balanceToFinish      Decimal? @db.Decimal(18, 2)
+  retainage            Decimal? @db.Decimal(18, 2)
+
+  // Cross-file reconciliation fields
+  file2ExtractedAmount Decimal? @db.Decimal(18, 2)
+  crossFileVariance    Decimal? @db.Decimal(18, 2)
+  file2MatchedSubId    String?  @db.NVarChar(255)
+
+  // Provenance
+  sourcePage           Int?
+  confidence           Decimal? @db.Decimal(5, 4)
+  bboxX                Decimal? @db.Decimal(10, 4)
+  bboxY                Decimal? @db.Decimal(10, 4)
+  bboxW                Decimal? @db.Decimal(10, 4)
+  bboxH                Decimal? @db.Decimal(10, 4)
+  validationStatus     String?  @db.NVarChar(50)
+
+  sortOrder            Int      @default(0)
+  extractedAt          DateTime @default(now()) @db.DateTime2
+  updatedAt            DateTime @updatedAt @db.DateTime2
+
+  // Relations
+  package Package @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("gc_pay_application_sov_lines")
+}
+
+// ─── 5. SubPayApplicationHeader ───────────────────────────────────────────────
+model SubPayApplicationHeader {
+  id                     String   @id @default(uuid())
+  packageId              String
+  seqId                  Int      @default(0)
+
+  // 19 extracted fields
+  subcontractorName      String?  @db.NVarChar(500)
+  applicationNo          String?  @db.NVarChar(50)
+  applicationDate        DateTime? @db.DateTime2
+  periodFrom             DateTime? @db.DateTime2
+  periodTo               DateTime? @db.DateTime2
+  invoiceTo              String?  @db.NVarChar(500)
+  projectNameOnDoc       String?  @db.NVarChar(500)
+  contractPoNumber       String?  @db.NVarChar(100)
+  originalContractSum    Decimal? @db.Decimal(18, 2)
+  netChangeOrders        Decimal? @db.Decimal(18, 2)
+  contractSumToDate      Decimal? @db.Decimal(18, 2)
+  totalCompletedStored   Decimal? @db.Decimal(18, 2)
+  totalRetainage         Decimal? @db.Decimal(18, 2)
+  totalEarnedLessRetainage Decimal? @db.Decimal(18, 2)
+  lessPrevCertificates   Decimal? @db.Decimal(18, 2)
+  currentPaymentDue      Decimal? @db.Decimal(18, 2)
+  balanceToFinish        Decimal? @db.Decimal(18, 2)
+  contractorSignature    String?  @db.NVarChar(255)
+  notarized              Boolean  @default(false)
+
+  // G703 totals
+  g703ScheduledValue     Decimal? @db.Decimal(18, 2)
+  g703WorkPrev           Decimal? @db.Decimal(18, 2)
+  g703WorkThisPeriod     Decimal? @db.Decimal(18, 2)
+  g703MaterialsStored    Decimal? @db.Decimal(18, 2)
+  g703TotalCompleted     Decimal? @db.Decimal(18, 2)
+  g703Retainage          Decimal? @db.Decimal(18, 2)
+  g703EarnedLessRet      Decimal? @db.Decimal(18, 2)
+  g703BalanceToFinish    Decimal? @db.Decimal(18, 2)
+
+  // Recon
+  reconFlag              Boolean  @default(false)
+  startPage              Int?
+  endPage                Int?
+
+  // Provenance
+  sourcePage             Int?
+  confidence             Decimal? @db.Decimal(5, 4)
+  bboxX                  Decimal? @db.Decimal(10, 4)
+  bboxY                  Decimal? @db.Decimal(10, 4)
+  bboxW                  Decimal? @db.Decimal(10, 4)
+  bboxH                  Decimal? @db.Decimal(10, 4)
+  validationStatus       String?  @db.NVarChar(50)
+
+  extractedAt            DateTime @default(now()) @db.DateTime2
+  updatedAt              DateTime @updatedAt @db.DateTime2
+
+  // Relations
+  package  Package               @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sovLines SubPayApplicationSovLine[]
+
+  @@map("sub_pay_application_headers")
+}
+
+// ─── 6. SubPayApplicationSovLine ──────────────────────────────────────────────
+model SubPayApplicationSovLine {
+  id               String   @id @default(uuid())
+  packageId        String
+  subHeaderId      String
+
+  // 9 extracted fields
+  itemNo           String?  @db.NVarChar(50)
+  description      String?  @db.NVarChar(Max)
+  scheduledValue   Decimal? @db.Decimal(18, 2)
+  workCompletedPrev Decimal? @db.Decimal(18, 2)
+  workCompletedThis Decimal? @db.Decimal(18, 2)
+  materialsStored  Decimal? @db.Decimal(18, 2)
+  totalCompleted   Decimal? @db.Decimal(18, 2)
+  pctComplete      Decimal? @db.Decimal(6, 4)
+  retainage        Decimal? @db.Decimal(18, 2)
+
+  // Provenance
+  sourcePage       Int?
+  confidence       Decimal? @db.Decimal(5, 4)
+  bboxX            Decimal? @db.Decimal(10, 4)
+  bboxY            Decimal? @db.Decimal(10, 4)
+  bboxW            Decimal? @db.Decimal(10, 4)
+  bboxH            Decimal? @db.Decimal(10, 4)
+  validationStatus String?  @db.NVarChar(50)
+
+  sortOrder        Int      @default(0)
+  extractedAt      DateTime @default(now()) @db.DateTime2
+  updatedAt        DateTime @updatedAt @db.DateTime2
+
+  // Relations
+  package   Package                @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subHeader SubPayApplicationHeader @relation(fields: [subHeaderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("sub_pay_application_sov_lines")
+}
+
+// ─── 7. DataChangeLog ─────────────────────────────────────────────────────────
+model DataChangeLog {
+  id         String   @id @default(uuid())
+  packageId  String?
+  tableName  String   @db.NVarChar(100)
+  rowId      String   @db.NVarChar(100)
+  fieldName  String   @db.NVarChar(100)
+  oldValue   String?  @db.NVarChar(Max)
+  newValue   String?  @db.NVarChar(Max)
+  changedBy  String   @db.NVarChar(255)
+  changedAt  DateTime @default(now()) @db.DateTime2
+  reason     String?  @db.NVarChar(Max)
+
+  // Relations
+  package Package? @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("data_change_logs")
+}
+
+// ─── 8. ReconException ────────────────────────────────────────────────────────
+model ReconException {
+  id          String   @id @default(uuid())
+  packageId   String
+  type        String   @db.NVarChar(100)
+  // type: CROSS_FILE_MISMATCH | MATH_ERROR | RETAINAGE_DEVIATION |
+  //       PERIOD_CONTINUITY | MISSING_SUPPORTING_DOC
+  severity    String   @db.NVarChar(20)
+  // severity: HIGH | MEDIUM | LOW
+  subName     String?  @db.NVarChar(500)
+  description String   @db.NVarChar(Max)
+  deltaAmount Decimal? @db.Decimal(18, 2)
+  evidence    String?  @db.NVarChar(Max)
+  status      String   @default("OPEN") @db.NVarChar(50)
+  // status: OPEN | ACCEPTED | DISMISSED | OVERRIDDEN
+  resolvedBy  String?  @db.NVarChar(255)
+  resolvedAt  DateTime? @db.DateTime2
+  resolution  String?  @db.NVarChar(Max)
+
+  createdAt   DateTime @default(now()) @db.DateTime2
+  updatedAt   DateTime @updatedAt @db.DateTime2
+
+  // Relations
+  package Package @relation(fields: [packageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("recon_exceptions")
+}
