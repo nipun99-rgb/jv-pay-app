@@ -1,0 +1,69 @@
+# .aidigest - AI Agent Quick Reference
+
+> Industry-standard AI context file for quick codebase understanding
+
+---
+
+## Project Identity
+- **Name:** JV Pay Application V2
+- **Type:** Construction Payment Application Processing System
+- **Architecture:** Microservices (3 services)
+- **Primary Tech:** React + TypeScript, Python + FastAPI, LangGraph Multi-Agent
+
+---
+
+## Active Folders (V2)
+```
+frontend/       - React SPA (Port 5173) - Main user interface
+api-gateway/    - Express API (Port 3001) - REST endpoints + Prisma
+ai-engine/      - Python AI (Port 8000) - LangGraph agents
+Docs/           - Architecture documentation (20 diagrams)
+```
+
+## Ignore These (Archived V1)
+```
+project-manager/  - ❌ Stale (old V1 backend)
+_archive/         - ❌ Old V1 code
+```
+
+---
+
+## Quick Commands
+
+Start Application:
+```bash
+docker-compose up
+```
+
+Development:
+```bash
+# Terminal 1
+cd ai-engine; ..\.venv\Scripts\activate; uvicorn app.main:app --reload
+
+# Terminal 2
+cd frontend; npm run dev
+```
+
+---
+
+## Entry Points
+- Frontend: `frontend/src/App.tsx`
+- API: `api-gateway/src/index.ts`
+- AI Engine: `ai-engine/app/main.py`
+
+---
+
+## Key Files for AI Agents
+1. `.ai-context.md` - Full AI agent instructions
+2. `PROJECT_STRUCTURE.md` - Complete folder breakdown
+3. `Docs/version-2-documentation/09-langgraph-architecture-diagrams.html` - Architecture (20 diagrams)
+4. `README.md` - Quick start guide
+5. `docker-compose.yml` - Service orchestration
+
+---
+
+## Agent Behavior
+**When asked to "open the application":**
+→ Work with `frontend/`, `api-gateway/`, `ai-engine/` ONLY
+→ Ignore `project-manager/` and `_archive/`
+→ Start with `docker-compose up`

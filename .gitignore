@@ -11,9 +11,14 @@ build/
 .env.local
 .env.*.local
 
+# ⚠️ SECURITY: Never commit credentials files
+CREDENTIALS_*
+*_CREDENTIALS.md
+*credentials*.txt
+
 # Binary files / PDFs
 project-manager/backend/uploads/*.pdf
-Test Files/*.pdf
+assets/source-documents/*.pdf
 
 # SQLite databases
 *.db
@@ -32,10 +37,22 @@ __pycache__/
 # Large JSON cache files
 *_ocr_cache.json
 *_page_images.json
+data/**/*_cache.json
+data/**/*_checkpoint.json
 payapp12_extract_cache.json
 payapp12_page_texts_cache.json
 payapp12_scan_cache.json
 gc_app12_g703_checkpoint.json
+
+# Generated data (not source-controlled)
+data/cache/
+
+# Archive folders (not source-controlled)
+archive/           # Active data (current month extractions, etc.)
+_archive/          # V1 legacy code and deprecated scripts
+
+# Stale/deprecated folders (DO NOT USE - archived V1)
+project-manager/   # Old V1 backend (use ai-engine/ + api-gateway/ instead)
 
 # VS Code
 .vscode/
